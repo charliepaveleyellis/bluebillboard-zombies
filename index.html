@@ -734,32 +734,41 @@ function xrFrame(time,frame){
 }
 
 // ─── STARTUP ────────────────────────────────────
-bindBtn('startBtn',async function(){
+function onStartTap(e){
+  if(e) e.preventDefault();
+
+  // Init audio and gyro immediately in user gesture
   initAudio();
   if(audioCtx&&audioCtx.state==='suspended') audioCtx.resume();
+  initCamera();
+  initGyro();
 
-  var canXR=await checkWebXR();
-  if(canXR){
-    try{
-      await startWebXR();
-      // WebXR started — init game state
-      score=0;kills=0;wave=1;hp=MAX_HP;
-      waveKills=0;waveTarget=5;spawnInterval=SPAWN_INTERVAL_START;
-      zombies=[];particles=[];frameCount=0;lastSpawn=0;
-      gameOver=false;screenFlash=0;damageFlash=0;
-      document.getElementById('startScreen').classList.add('hidden');
-      document.getElementById('endScreen').classList.add('hidden');
-      running=true;
-      return;
-    }catch(e){/* WebXR failed, fall through to camera+gyro */}
-  }
+  // Try WebXR, fall back to canvas
+  checkWebXR().then(function(canXR){
+    if(canXR){
+      startWebXR().then(function(){
+        score=0;kills=0;wave=1;hp=MAX_HP;
+        waveKills=0;waveTarget=5;spawnInterval=SPAWN_INTERVAL_START;
+        zombies=[];particles=[];frameCount=0;lastSpawn=0;
+        gameOver=false;screenFlash=0;damageFlash=0;
+        document.getElementById('startScreen').classList.add('hidden');
+        document.getElementById('endScreen').classList.add('hidden');
+        running=true;
+      }).catch(function(){
+        // WebXR failed — use canvas+gyro
+        startGame();
+      });
+    } else {
+      startGame();
+    }
+  }).catch(function(){
+    startGame();
+  });
+}
 
-  // iOS / fallback — camera + gyro
-  initCamera();initGyro();startGame();
-});
-bindBtn('restartBtn',function(){
+function onRestartTap(e){
+  if(e) e.preventDefault();
   if(useWebXR&&xrSession){
-    // Reset game state for WebXR
     zombies.forEach(function(z){if(z.mesh)xrScene.remove(z.mesh);});
     score=0;kills=0;wave=1;hp=MAX_HP;
     waveKills=0;waveTarget=5;spawnInterval=SPAWN_INTERVAL_START;
@@ -770,7 +779,16 @@ bindBtn('restartBtn',function(){
   } else {
     startGame();
   }
-});
+}
+
+// Bind with both touch and click for maximum compatibility
+var startEl=document.getElementById('startBtn');
+startEl.addEventListener('touchend',function(e){e.preventDefault();e.stopPropagation();onStartTap(e);},{passive:false});
+startEl.addEventListener('click',function(e){e.stopPropagation();onStartTap(e);});
+
+var restartEl=document.getElementById('restartBtn');
+restartEl.addEventListener('touchend',function(e){e.preventDefault();e.stopPropagation();onRestartTap(e);},{passive:false});
+restartEl.addEventListener('click',function(e){e.stopPropagation();onRestartTap(e);});
 </script>
 </body>
 </html>
