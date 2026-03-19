@@ -1325,6 +1325,7 @@ function xrFrame(time,frame){
   if(xrHitTestSource){var hits=frame.getHitTestResults(xrHitTestSource);
     if(hits.length>0){var pose=hits[0].getPose(xrLocalRef);if(pose){xrFloorY=xrFloorY*0.9+pose.transform.position.y*0.1;}}}
   if(running&&!gameOver){
+    updateYaw(); // keep radar in sync with phone rotation
     if(time-lastSpawn>spawnInterval){spawnXRZombie();if(wave>3&&Math.random()<0.3)spawnXRZombie();lastSpawn=time;}
     for(var i=zombies.length-1;i>=0;i--){
       var z=zombies[i];if(!z.xr) continue;var m=z.mesh;
