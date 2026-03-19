@@ -441,27 +441,26 @@ function handleTap(e){
     var hitH=Math.max(80,zh)+50;
     var zcx=z.x,zcy=z.y-zh/2;
     if(tx>=zcx-hitW/2&&tx<=zcx+hitW/2&&ty>=zcy-hitH/2&&ty<=zcy+hitH/2){
-        z.hp--;z.hitTimer=0.3;hit=true;
-        if(z.hp<=0){
-          kills++;waveKills++;score+=z.isBig?25:10;
-          sfxKill();
-          spawnParticles(z.x,z.y-zh/2,'#4a7a4a',12);
-          spawnParticles(z.x,z.y-zh/2,'#ff3333',6);
-          zombies.splice(i,1);
-          if(waveKills>=waveTarget){
-            wave++;waveKills=0;
-            waveTarget=Math.floor(5+wave*2.5);
-            spawnInterval=Math.max(SPAWN_INTERVAL_MIN,SPAWN_INTERVAL_START-wave*100);
-            sfxWave();screenFlash=10;
-          }
-        } else {
-          spawnParticles(tx,ty,'#ff0000',4);
+      z.hp--;z.hitTimer=0.3;hit=true;
+      if(z.hp<=0){
+        kills++;waveKills++;score+=z.isBig?25:10;
+        sfxKill();
+        spawnParticles(z.x,z.y-zh/2,'#4a7a4a',12);
+        spawnParticles(z.x,z.y-zh/2,'#ff3333',6);
+        zombies.splice(i,1);
+        if(waveKills>=waveTarget){
+          wave++;waveKills=0;
+          waveTarget=Math.floor(5+wave*2.5);
+          spawnInterval=Math.max(SPAWN_INTERVAL_MIN,SPAWN_INTERVAL_START-wave*100);
+          sfxWave();screenFlash=10;
         }
-        break;
+      } else {
+        spawnParticles(tx,ty,'#ff0000',4);
       }
+      break;
     }
-    if(!hit) spawnParticles(tx,ty,'rgba(150,150,150,0.5)',2);
   }
+  if(!hit) spawnParticles(tx,ty,'rgba(150,150,150,0.5)',2);
 }
 C.addEventListener('touchstart',function(e){
   if(!running||gameOver) return; // don't block buttons when not playing
