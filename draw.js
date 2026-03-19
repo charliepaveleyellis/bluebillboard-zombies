@@ -1,10 +1,11 @@
 // ─── SKIN COLOR HELPERS ─────────────────────────
 function zombieSkin(z,light){
   var hue=z.skinHue||0;
-  if(z.type==='runner') return light?'rgb('+(60+hue)+','+(90+hue)+','+(70+hue)+')':'rgb('+(30+hue)+','+(55+hue)+','+(35+hue)+')';
-  if(z.type==='tank') return light?'rgb('+(40+hue)+','+(65+hue)+','+(40+hue)+')':'rgb('+(15+hue)+','+(35+hue)+','+(15+hue)+')';
-  if(z.type==='crawler') return light?'rgb('+(80+hue)+','+(75+hue)+','+(60+hue)+')':'rgb('+(45+hue)+','+(40+hue)+','+(30+hue)+')';
-  return light?'rgb('+(50+hue)+','+(85+hue)+','+(55+hue)+')':'rgb('+(25+hue)+','+(50+hue)+','+(28+hue)+')';
+  // Each type has a VERY different colour so you can tell them apart instantly
+  if(z.type==='runner') return light?'rgb('+(100+hue)+','+(80+hue)+','+(120+hue)+')':'rgb('+(55+hue)+','+(40+hue)+','+(70+hue)+')'; // purple
+  if(z.type==='tank') return light?'rgb('+(70+hue)+','+(50+hue)+','+(40+hue)+')':'rgb('+(40+hue)+','+(25+hue)+','+(18+hue)+')'; // dark brown
+  if(z.type==='crawler') return light?'rgb('+(120+hue)+','+(110+hue)+','+(60+hue)+')':'rgb('+(70+hue)+','+(60+hue)+','+(30+hue)+')'; // sickly yellow
+  return light?'rgb('+(50+hue)+','+(100+hue)+','+(55+hue)+')':'rgb('+(25+hue)+','+(55+hue)+','+(28+hue)+')'; // classic green
 }
 
 // ─── DRAW ZOMBIE ────────────────────────────────
@@ -473,12 +474,20 @@ function drawHUD(){
     var rz=zombies[i];
     var relA=angleDiff(rz.worldAngle,camYaw-yawOffset)*Math.PI/180;
     var rd=Math.min(1,rz.dist/10);
-    X.globalAlpha=0.6+Math.sin(frameCount*0.1+i)*0.4;
-    X.fillStyle=rz.isBig?'#ff0000':rz.type==='runner'?'#ffaa00':'#ff4444';
-    X.shadowColor='#ff0000';X.shadowBlur=4;
-    X.beginPath();X.arc(rX+Math.sin(relA)*rR*rd,rY-Math.cos(relA)*rR*rd,rz.isBig?4:2.5,0,Math.PI*2);X.fill();
+    X.globalAlpha=1;
+    // Colour by type
+    if(rz.type==='runner') X.fillStyle='#dd66ff';
+    else if(rz.type==='tank') X.fillStyle='#ff2200';
+    else if(rz.type==='crawler') X.fillStyle='#ffcc00';
+    else X.fillStyle='#ff4444';
+    X.shadowColor=X.fillStyle;X.shadowBlur=6;
+    var dotR=rz.isBig?5:3.5;
+    X.beginPath();X.arc(rX+Math.sin(relA)*rR*rd,rY-Math.cos(relA)*rR*rd,dotR,0,Math.PI*2);X.fill();
   }
   X.shadowBlur=0;X.shadowColor='transparent';X.globalAlpha=1;
+  // Zombie count on radar
+  X.fillStyle='#ff6644';X.font='bold 10px Courier New';X.textAlign='center';
+  X.fillText(zombies.length+' nearby',rX,rY+rR+14);
 
   // Warning arrows
   for(var i=0;i<zombies.length;i++){
