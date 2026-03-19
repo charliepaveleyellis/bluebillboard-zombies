@@ -21,17 +21,15 @@ function handleTap(e){
   lastTapX=tx;lastTapY=ty;tapFired=true;
   sfxShoot();spawnParticles(tx,ty,'#ffaa00',3);
 
-  // Find nearest zombie to tap
+  // Find nearest on-screen zombie — ANY tap kills the closest one
   var bestIdx=-1,bestDist=99999;
   for(var i=0;i<zombies.length;i++){
     var z=zombies[i];
     if(!z.onScreen) continue;
-    var zh=getZombieHeight(z.dist);
-    var zcx=z.x,zcy=z.y-zh/2;
-    var dx=tx-zcx,dy=ty-zcy;
+    // Just find the closest zombie to tap point, no max distance
+    var dx=tx-z.x,dy=ty-(z.y-getZombieHeight(z.dist)/2);
     var d=Math.sqrt(dx*dx+dy*dy);
-    var maxDist=Math.max(80,zh);
-    if(d<maxDist&&d<bestDist){bestDist=d;bestIdx=i;}
+    if(d<bestDist){bestDist=d;bestIdx=i;}
   }
   if(bestIdx>=0){
     var z=zombies[bestIdx];
