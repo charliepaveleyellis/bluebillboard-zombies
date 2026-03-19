@@ -47,7 +47,7 @@ canvas{position:fixed;top:0;left:0;width:100%;height:100%;z-index:1;}
 <div class="overlay" id="startScreen">
   <img src="logo.png" alt="Blue Billboard" class="logo-img">
   <h1>Zombie AR</h1>
-  <h2>Point your phone at the floor!<br>Zombies will walk toward you on the ground!<br>Look around to find them &mdash; tap to shoot!</h2>
+  <h2>Zombies are coming through your camera!<br>Tap them before they reach you!<br>Survive as long as you can!</h2>
   <button class="btn" id="startBtn">Survive!</button>
 </div>
 
@@ -90,34 +90,6 @@ function initCamera(){
   .catch(function(){cam.classList.add('hidden');fallback.classList.remove('hidden');});
 }
 
-// ─── DEVICE ORIENTATION ─────────────────────────
-// Tracks where the phone is pointing so zombies stay anchored to the real world
-var camYaw=0,camPitch=45;  // degrees — yaw=compass, pitch=tilt (0=horizon, 90=floor)
-var hasGyro=false;
-var yawOffset=0;  // set on game start so "forward" = wherever you're pointing
-
-function initGyro(){
-  // iOS 13+ requires permission
-  if(typeof DeviceOrientationEvent!=='undefined'&&typeof DeviceOrientationEvent.requestPermission==='function'){
-    DeviceOrientationEvent.requestPermission().then(function(response){
-      if(response==='granted') startListening();
-    }).catch(function(){});
-  } else {
-    startListening();
-  }
-}
-
-function startListening(){
-  window.addEventListener('deviceorientation',function(e){
-    if(e.alpha===null) return;
-    hasGyro=true;
-    // alpha = compass heading (0-360)
-    // beta = tilt front-back (0=flat, 90=upright)
-    // gamma = tilt left-right (-90 to 90)
-    camYaw=e.alpha||0;
-    camPitch=e.beta||45;
-  },true);
-}
 
 // ─── CANVAS ─────────────────────────────────────
 var C=document.getElementById('game');
@@ -129,8 +101,6 @@ window.addEventListener('resize',resize);resize();
 var MAX_HP=5;
 var SPAWN_INTERVAL_START=2000;
 var SPAWN_INTERVAL_MIN=400;
-var CAM_FOV_H=60;  // horizontal field of view in degrees
-var CAM_FOV_V=80;  // vertical field of view in degrees
 
 // ─── STATE ──────────────────────────────────────
 var running=false,gameOver=false;
@@ -148,46 +118,15 @@ var damageFlash=0;
 var startScreen=document.getElementById('startScreen');
 var endScreen=document.getElementById('endScreen');
 
-// ─── WORLD PROJECTION ──────────────────────────
-// Zombies live in world space: angle (degrees around player) + distance (meters)
-// Phone orientation determines which part of the world is visible on screen
-
-function angleDiff(a,b){
-  var d=a-b;
-  while(d>180) d-=360;
-  while(d<-180) d+=360;
-  return d;
-}
-
-function worldToScreen(worldAngle,worldDist){
-  // How far off-center is this zombie horizontally?
-  var relYaw=angleDiff(worldAngle,camYaw-yawOffset);
-  // Horizontal screen position (-1 to 1, 0=center)
-  var sx=relYaw/(CAM_FOV_H/2);
-  if(sx<-1.3||sx>1.3) return null;  // off screen
-
-  // Vertical: zombie is at eye level — center of screen vertically
-  // Just stays roughly centered regardless of phone tilt
-  var sy=0;
-
-  // Scale based on distance (closer = bigger)
-  var scale=Math.min(3.0,2.5/worldDist);
-
-  return {
-    screenX:C.width/2+sx*(C.width/2),
-    screenY:C.height/2+sy*(C.height/2),
-    scale:scale,
-    visible:Math.abs(sx)<=1&&Math.abs(sy)<=1
-  };
-}
-
 // ─── ZOMBIE ─────────────────────────────────────
+// Zombies walk toward you on screen. They have a fixed screenX lane
+// and a distance that decreases. Scale = how close they are.
+// Drawn full height: feet on ground, head at eye level.
 function spawnZombie(){
-  // Spawn at a random angle around the player, far away
   var z={
-    worldAngle:Math.random()*360,        // position around player in degrees
-    worldDist:6+Math.random()*4,          // meters away (starts far)
-    speed:(0.4+Math.random()*0.5)*(1+wave*0.06),  // meters per second
+    laneX:0.1+Math.random()*0.8,  // 0-1 horizontal position on screen
+    dist:10+Math.random()*5,       // starts far away
+    speed:(0.4+Math.random()*0.5)*(1+wave*0.06),
     hp:1+Math.floor(wave/4),
     maxHp:1+Math.floor(wave/4),
     hitTimer:0,
@@ -195,8 +134,7 @@ function spawnZombie(){
     wobbleSpeed:0.02+Math.random()*0.03,
     type:Math.random()<0.12+wave*0.02?'big':'normal',
     armPhase:Math.random()*Math.PI*2,
-    // Screen coords computed each frame
-    x:0,y:0,scale:0.1,onScreen:false
+    x:0,y:0,scale:0.1,onScreen:true
   };
   if(z.type==='big'){z.hp+=2;z.maxHp=z.hp;z.speed*=0.65;}
   zombies.push(z);
@@ -207,10 +145,11 @@ function drawZombie(z){
   if(!z.onScreen) return;
   var s=z.scale;
   if(s<0.03) return;
-  var w=70*s,h=105*s;
+  var w=70*s,h=180*s;  // tall — full human height
   var wobX=Math.sin(z.wobble)*4*s;
   var wobY=Math.cos(z.wobble*0.7)*2*s;
-  var cx=z.x+wobX,cy=z.y+wobY;
+  // Position: feet at z.y (bottom), body center drawn upward from there
+  var cx=z.x+wobX,cy=z.y-h*0.35+wobY;  // center of body is above feet
 
   X.save();
   X.translate(cx,cy);
@@ -362,37 +301,6 @@ function drawHUD(){
   X.fillStyle='rgba(255,50,50,0.15)';X.fillRect(16,58,progW,6);
   X.fillStyle='rgba(255,100,50,0.6)';X.fillRect(16,58,progW*prog,6);
 
-  // Radar — shows zombie directions so you know where to look
-  var radarR=30;
-  var radarX=C.width/2;
-  var radarY=C.height-radarR-20;
-  X.globalAlpha=0.5;
-  X.strokeStyle='#ff3333';X.lineWidth=1;
-  X.beginPath();X.arc(radarX,radarY,radarR,0,Math.PI*2);X.stroke();
-  X.beginPath();X.arc(radarX,radarY,radarR*0.5,0,Math.PI*2);X.stroke();
-  // Player dot
-  X.fillStyle='#fff';
-  X.beginPath();X.arc(radarX,radarY,2,0,Math.PI*2);X.fill();
-  // Zombie dots
-  for(var i=0;i<zombies.length;i++){
-    var rz=zombies[i];
-    var relA=angleDiff(rz.worldAngle,camYaw-yawOffset)*Math.PI/180;
-    var rd=Math.min(1,rz.worldDist/10);
-    var rx=radarX+Math.sin(relA)*radarR*rd;
-    var ry=radarY-Math.cos(relA)*radarR*rd;
-    X.fillStyle=rz.type==='big'?'#ff0000':'#ff4444';
-    X.beginPath();X.arc(rx,ry,rz.type==='big'?3:2,0,Math.PI*2);X.fill();
-  }
-  // FOV cone
-  X.strokeStyle='rgba(255,255,255,0.3)';X.lineWidth=1;
-  var fovRad=CAM_FOV_H/2*Math.PI/180;
-  X.beginPath();
-  X.moveTo(radarX,radarY);
-  X.lineTo(radarX+Math.sin(-fovRad)*radarR,radarY-Math.cos(-fovRad)*radarR);
-  X.moveTo(radarX,radarY);
-  X.lineTo(radarX+Math.sin(fovRad)*radarR,radarY-Math.cos(fovRad)*radarR);
-  X.stroke();
-  X.globalAlpha=1;
 }
 
 // ─── AR OVERLAY ─────────────────────────────────
@@ -417,26 +325,6 @@ function drawAROverlay(){
   X.beginPath();X.moveTo(cx2,cy2-20);X.lineTo(cx2,cy2+20);X.stroke();
   X.beginPath();X.arc(cx2,cy2,14,0,Math.PI*2);X.stroke();
 
-  // Warning arrows for off-screen zombies
-  for(var i=0;i<zombies.length;i++){
-    var oz=zombies[i];
-    if(oz.onScreen||oz.worldDist>8) continue;
-    var relA2=angleDiff(oz.worldAngle,camYaw-yawOffset);
-    if(Math.abs(relA2)<CAM_FOV_H/2) continue;
-    // Draw arrow on edge of screen pointing toward zombie
-    var arrowX=relA2>0?C.width-30:30;
-    var arrowY=C.height/2;
-    var urgency=Math.min(1,(3-oz.worldDist)/3);
-    if(urgency<0) continue;
-    X.globalAlpha=0.4+urgency*0.5;
-    X.fillStyle='#ff3333';
-    X.font='bold 28px Courier New';X.textAlign='center';
-    X.fillText(relA2>0?'\u25B6':'\u25C0',arrowX,arrowY);
-    // Distance
-    X.font='10px Courier New';
-    X.fillText(Math.round(oz.worldDist)+'m',arrowX,arrowY+18);
-    X.globalAlpha=1;
-  }
 }
 
 // ─── TAP HANDLER ────────────────────────────────
@@ -455,10 +343,11 @@ function handleTap(e){
     for(var i=zombies.length-1;i>=0;i--){
       var z=zombies[i];
       if(!z.onScreen) continue;
-      var zw=70*z.scale,zh=105*z.scale;
+      var zw=70*z.scale,zh=180*z.scale;
       var pad=18*z.scale;
-      if(tx>=z.x-zw/2-pad&&tx<=z.x+zw/2+pad&&
-         ty>=z.y-zh*0.5-pad&&ty<=z.y+zh*0.5+pad){
+      var zcx=z.x,zcy=z.y-zh*0.35;  // center of body above feet
+      if(tx>=zcx-zw/2-pad&&tx<=zcx+zw/2+pad&&
+         ty>=zcy-zh*0.5-pad&&ty<=zcy+zh*0.5+pad){
         z.hp--;z.hitTimer=8;hit=true;
 
         if(z.hp<=0){
@@ -511,29 +400,35 @@ function gameLoop(timestamp){
       var z=zombies[i];
 
       // Walk toward player — decrease distance
-      z.worldDist-=z.speed*dt;
+      z.dist-=z.speed*dt;
 
-      // Slight angle wobble (shamble side to side)
-      z.worldAngle+=Math.sin(z.wobble)*0.15;
+      // Slight lane wobble
+      z.laneX+=Math.sin(z.wobble*0.5)*0.001;
+      z.laneX=Math.max(0.05,Math.min(0.95,z.laneX));
       z.wobble+=z.wobbleSpeed;
       if(z.hitTimer>0) z.hitTimer--;
 
-      // Project to screen
-      var proj=worldToScreen(z.worldAngle,z.worldDist);
-      if(proj){
-        z.x=proj.screenX;
-        z.y=proj.screenY;
-        z.scale=proj.scale;
-        if(z.type==='big') z.scale*=1.4;
-        z.onScreen=proj.visible;
-      } else {
-        z.onScreen=false;
-      }
+      // Compute screen position from distance
+      // Scale: closer = bigger
+      z.scale=Math.min(3.0,2.5/Math.max(0.5,z.dist));
+      if(z.type==='big') z.scale*=1.4;
+
+      // X: fixed lane, spreads out as they get closer (perspective)
+      var spread=0.3+Math.min(0.7,z.scale*0.3);
+      z.x=C.width/2+(z.laneX-0.5)*C.width*spread;
+
+      // Y: feet on the ground — bottom of screen, rising as they get closer
+      // At max distance feet are near bottom, as they approach feet stay grounded
+      // but body fills more of the screen
+      var groundY=C.height*0.92;  // ground line near bottom
+      z.y=groundY;  // feet always on ground
+
+      z.onScreen=true;
 
       // Reached the player?
-      if(z.worldDist<=0.5){
+      if(z.dist<=0.8){
         hp--;sfxHit();damageFlash=12;
-        if(z.onScreen) spawnParticles(z.x,z.y,'#ff0000',8);
+        spawnParticles(z.x,z.y-90*z.scale,'#ff0000',8);
         zombies.splice(i,1);
         if(navigator.vibrate) navigator.vibrate([100,50,150]);
         if(hp<=0){
@@ -545,8 +440,8 @@ function gameLoop(timestamp){
     }
   }
 
-  // Sort by distance (far first)
-  zombies.sort(function(a,b){return b.worldDist-a.worldDist;});
+  // Sort by distance (far first, close on top)
+  zombies.sort(function(a,b){return b.dist-a.dist;});
 
   for(var i=0;i<zombies.length;i++) drawZombie(zombies[i]);
   drawParticles();
@@ -577,9 +472,6 @@ function startGame(){
     frameCount=0;lastSpawn=0;lastTime=0;
     gameOver=false;screenFlash=0;damageFlash=0;
 
-    // Set current phone direction as "forward"
-    yawOffset=camYaw;
-
     resize();
     startScreen.classList.add('hidden');
     endScreen.classList.add('hidden');
@@ -606,7 +498,7 @@ function bindBtn(id,fn){
   el.addEventListener('touchstart',function(e){e.stopPropagation();},{passive:false});
   el.addEventListener('click',function(e){e.preventDefault();e.stopPropagation();fn();});
 }
-bindBtn('startBtn',function(){initCamera();initGyro();startGame();});
+bindBtn('startBtn',function(){initCamera();startGame();});
 bindBtn('restartBtn',startGame);
 </script>
 </body>
