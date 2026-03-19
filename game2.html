@@ -11,30 +11,30 @@ body{font-family:'Courier New',monospace;overflow:hidden;background:#000;
 #cam{position:fixed;top:0;left:0;width:100%;height:100%;object-fit:cover;z-index:0;}
 #cam.hidden{display:none;}
 .fallback{position:fixed;top:0;left:0;right:0;bottom:0;z-index:0;
-  background:linear-gradient(135deg,#0a0a1a 0%,#1a0a0a 50%,#0a0a1a 100%);}
+  background:linear-gradient(135deg,#000510 0%,#001030 50%,#000510 100%);}
 .fallback.hidden{display:none;}
 canvas{position:fixed;top:0;left:0;width:100%;height:100%;z-index:1;pointer-events:none;}
 
 .overlay{position:fixed;top:0;left:0;right:0;bottom:0;z-index:10;
   display:flex;flex-direction:column;justify-content:center;align-items:center;
-  background:rgba(10,0,0,0.92);color:#fff;text-align:center;padding:24px;}
+  background:rgba(0,10,30,0.94);color:#fff;text-align:center;padding:24px;}
 .overlay.hidden{display:none;}
 .overlay .logo-img{width:180px;margin-bottom:20px;}
-.overlay h1{font-size:34px;text-transform:uppercase;letter-spacing:4px;margin-bottom:8px;color:#ff3333;
-  text-shadow:0 0 25px rgba(255,50,50,0.6);}
+.overlay h1{font-size:34px;text-transform:uppercase;letter-spacing:4px;margin-bottom:8px;color:#2ea3f2;
+  text-shadow:0 0 25px rgba(46,163,242,0.6);}
 .overlay h2{font-size:16px;font-weight:400;margin-bottom:20px;color:#d9d9d9;line-height:1.6;}
-.overlay .final-score{font-size:80px;font-weight:900;color:#ff3333;margin:10px 0;
-  text-shadow:0 0 40px rgba(255,50,50,0.5);}
+.overlay .final-score{font-size:80px;font-weight:900;color:#2ea3f2;margin:10px 0;
+  text-shadow:0 0 40px rgba(46,163,242,0.5);}
 .overlay .final-label{font-size:16px;color:#d9d9d9;text-transform:uppercase;letter-spacing:3px;}
-.overlay .stats{font-size:15px;color:#ff6644;margin-top:6px;}
+.overlay .stats{font-size:15px;color:#2ea3f2;margin-top:6px;}
 .overlay .high{font-size:16px;color:#ffdd00;margin-top:6px;}
 .btn{display:inline-block;padding:16px 50px;font-size:18px;font-weight:700;
-  text-transform:uppercase;letter-spacing:2px;color:#fff;background:#660000;
-  border:2px solid #ff3333;border-radius:50px;cursor:pointer;margin-top:20px;
-  box-shadow:0 0 15px rgba(255,50,50,0.3);}
-.btn:active{background:#ff3333;box-shadow:0 0 25px rgba(255,50,50,0.6);}
+  text-transform:uppercase;letter-spacing:2px;color:#fff;background:#003d7a;
+  border:2px solid #2ea3f2;border-radius:50px;cursor:pointer;margin-top:20px;
+  box-shadow:0 0 15px rgba(46,163,242,0.3);}
+.btn:active{background:#2ea3f2;box-shadow:0 0 25px rgba(46,163,242,0.6);}
 .powered-by{position:fixed;bottom:4px;left:0;right:0;text-align:center;
-  font-size:10px;color:rgba(255,50,50,0.15);letter-spacing:1px;
+  font-size:10px;color:rgba(46,163,242,0.15);letter-spacing:1px;
   text-transform:uppercase;z-index:5;pointer-events:none;}
 
 </style>
@@ -214,22 +214,37 @@ function drawZombie(z){
   var big=z.isBig;
   var type=z.type||'normal';
 
-  // DEBUG: bright border to confirm new draw.js is running
-  X.strokeStyle='#ff00ff';X.lineWidth=3;
-  X.strokeRect(z.x-w/2,z.y-h,w,h);
-
   var feetY=z.y;
   var wobX=Math.sin(z.wobble)*4*s*5;
   var stepBounce=Math.abs(Math.sin(z.wobble*2))*3*s*4;
   var lean=Math.sin(z.wobble*0.5)*0.06;
-  // Crawlers lean forward more
   var crawlerLean=type==='crawler'?0.3:0;
   var cx=z.x+wobX;
   var bodyCenter=feetY-h*(type==='crawler'?0.35:0.5)-stepBounce;
 
+  // ── DEATH ANIMATION ──
+  var deathProgress=0;
+  if(z.dying){
+    deathProgress=1-Math.max(0,z.deathTimer); // 0 to 1
+    var fallAngle=deathProgress*Math.PI*0.45*(z.deathFallDir>0?1:-1); // fall sideways
+    var sinkY=deathProgress*deathProgress*h*0.3; // sink into ground
+    var deathScale=1-deathProgress*0.3; // shrink slightly
+    lean=fallAngle;
+    crawlerLean=0;
+    wobX=0;stepBounce=0;
+    cx=z.x;
+    bodyCenter=feetY-h*0.5+sinkY;
+    h*=deathScale;w*=deathScale;
+  }
+
   X.save();
   X.translate(cx,bodyCenter);
   X.rotate(lean+crawlerLean);
+
+  // Death fade
+  if(z.dying){
+    X.globalAlpha=Math.max(0,z.deathTimer);
+  }
 
   var distAlpha=Math.min(1,Math.max(0.15,s*2.5));
   X.globalAlpha=distAlpha;
@@ -609,73 +624,83 @@ function drawParticles(){
 
 // ─── HUD ────────────────────────────────────────
 function drawHUD(){
+  // Top bar — BB dark blue
   var hbg=X.createLinearGradient(0,0,0,80);
-  hbg.addColorStop(0,'rgba(0,0,0,0.8)');hbg.addColorStop(1,'rgba(0,0,0,0)');
+  hbg.addColorStop(0,'rgba(0,5,20,0.85)');hbg.addColorStop(1,'rgba(0,5,20,0)');
   X.fillStyle=hbg;X.fillRect(0,0,C.width,80);
-  X.fillStyle='rgba(255,50,50,0.4)';X.fillRect(0,0,C.width,2);
+  X.fillStyle='rgba(46,163,242,0.4)';X.fillRect(0,0,C.width,2);
 
-  X.fillStyle=useWebXR?'#33ff33':'#ff6644';X.font='bold 10px Courier New';X.textAlign='center';
+  // Mode indicator — BB blue
+  X.fillStyle=useWebXR?'#00ffff':'#2ea3f2';X.font='bold 10px Courier New';X.textAlign='center';
   X.fillText(useWebXR?'[ REAL AR ]':'[ CAMERA ]',C.width/2,14);
 
-  X.shadowColor='rgba(255,50,50,0.5)';X.shadowBlur=10;
+  // Score — white with BB blue glow
+  X.shadowColor='rgba(46,163,242,0.5)';X.shadowBlur=10;
   X.fillStyle='#fff';X.font='bold 36px Courier New';X.textAlign='center';
   X.fillText(score,C.width/2,46);
   X.shadowBlur=0;X.shadowColor='transparent';
   X.fillStyle='#ffdd00';X.font='10px Courier New';
   X.fillText('HI '+Math.max(highScore,score),C.width/2,60);
 
-  X.fillStyle='#ff6644';X.font='bold 16px Courier New';X.textAlign='left';
+  // Wave — BB blue
+  X.fillStyle='#2ea3f2';X.font='bold 16px Courier New';X.textAlign='left';
   X.fillText('W'+wave,16,28);
-  X.fillStyle='#ff4444';X.font='bold 12px Courier New';
+  X.fillStyle='#00ffff';X.font='bold 12px Courier New';
   X.fillText(kills+' KILLS',16,46);
 
+  // Hearts — red (danger colour stays)
   X.textAlign='right';
   var heartX=C.width-16;
   for(var i=MAX_HP-1;i>=0;i--){
     X.font='24px serif';
     if(i<hp){X.shadowColor='rgba(255,0,0,0.5)';X.shadowBlur=6;X.fillStyle='#ff3333';}
-    else{X.shadowBlur=0;X.shadowColor='transparent';X.fillStyle='#440000';}
+    else{X.shadowBlur=0;X.shadowColor='transparent';X.fillStyle='#1a0000';}
     X.fillText('\u2764',heartX,36);heartX-=28;
   }
   X.shadowBlur=0;X.shadowColor='transparent';
 
+  // Wave progress — BB blue to cyan gradient
   var progW=C.width-32,prog=Math.min(waveKills/waveTarget,1);
-  X.fillStyle='rgba(255,50,50,0.1)';X.fillRect(16,66,progW,4);
+  X.fillStyle='rgba(46,163,242,0.1)';X.fillRect(16,66,progW,4);
   var pg=X.createLinearGradient(16,0,16+progW*prog,0);
-  pg.addColorStop(0,'#ff3333');pg.addColorStop(1,'#ff8800');
+  pg.addColorStop(0,'#003d7a');pg.addColorStop(1,'#2ea3f2');
   X.fillStyle=pg;X.fillRect(16,66,progW*prog,4);
-  if(prog>0){X.shadowColor='#ff5500';X.shadowBlur=8;X.fillRect(16+progW*prog-4,65,4,6);X.shadowBlur=0;X.shadowColor='transparent';}
+  if(prog>0){X.shadowColor='#2ea3f2';X.shadowBlur=8;X.fillRect(16+progW*prog-4,65,4,6);X.shadowBlur=0;X.shadowColor='transparent';}
 
-  // Radar
+  // Radar — BB blue theme
   var rR=38,rX=C.width/2,rY=C.height-rR-24;
   X.globalAlpha=0.6;
   var rg=X.createRadialGradient(rX,rY,0,rX,rY,rR);
-  rg.addColorStop(0,'rgba(20,0,0,0.7)');rg.addColorStop(1,'rgba(0,0,0,0.4)');
+  rg.addColorStop(0,'rgba(0,10,30,0.7)');rg.addColorStop(1,'rgba(0,5,15,0.4)');
   X.fillStyle=rg;X.beginPath();X.arc(rX,rY,rR,0,Math.PI*2);X.fill();
-  X.strokeStyle='rgba(255,50,50,0.3)';X.lineWidth=1;
+  X.strokeStyle='rgba(46,163,242,0.3)';X.lineWidth=1;
   X.beginPath();X.arc(rX,rY,rR,0,Math.PI*2);X.stroke();
   X.beginPath();X.arc(rX,rY,rR*0.6,0,Math.PI*2);X.stroke();
   X.beginPath();X.arc(rX,rY,rR*0.3,0,Math.PI*2);X.stroke();
+  // Sweep line — cyan
   var sw=frameCount*0.03;
-  X.strokeStyle='rgba(255,80,50,0.2)';X.lineWidth=2;
+  X.strokeStyle='rgba(0,255,255,0.2)';X.lineWidth=2;
   X.beginPath();X.moveTo(rX,rY);X.lineTo(rX+Math.sin(sw)*rR,rY-Math.cos(sw)*rR);X.stroke();
-  X.strokeStyle='rgba(255,50,50,0.15)';X.lineWidth=1;
+  // Cross lines
+  X.strokeStyle='rgba(46,163,242,0.15)';X.lineWidth=1;
   X.beginPath();X.moveTo(rX-rR,rY);X.lineTo(rX+rR,rY);X.stroke();
   X.beginPath();X.moveTo(rX,rY-rR);X.lineTo(rX,rY+rR);X.stroke();
-  X.fillStyle='#00ff88';X.globalAlpha=1;
+  // Player dot — BB blue
+  X.fillStyle='#2ea3f2';X.globalAlpha=1;
   X.beginPath();X.arc(rX,rY,3,0,Math.PI*2);X.fill();
+  // FOV cone
   var fovR2=CAM_FOV_H/2*Math.PI/180;
-  X.fillStyle='rgba(255,255,255,0.04)';
+  X.fillStyle='rgba(46,163,242,0.06)';
   X.beginPath();X.moveTo(rX,rY);X.arc(rX,rY,rR,-Math.PI/2-fovR2,-Math.PI/2+fovR2);X.closePath();X.fill();
-  X.strokeStyle='rgba(255,255,255,0.2)';X.lineWidth=1;
+  X.strokeStyle='rgba(46,163,242,0.25)';X.lineWidth=1;
   X.beginPath();X.moveTo(rX,rY);X.lineTo(rX+Math.sin(-fovR2)*rR,rY-Math.cos(-fovR2)*rR);X.stroke();
   X.beginPath();X.moveTo(rX,rY);X.lineTo(rX+Math.sin(fovR2)*rR,rY-Math.cos(fovR2)*rR);X.stroke();
+  // Zombie dots — red (danger) on blue radar
   for(var i=0;i<zombies.length;i++){
     var rz=zombies[i];
     var relA=angleDiff(rz.worldAngle,camYaw-yawOffset)*Math.PI/180;
     var rd=Math.min(1,rz.dist/10);
     X.globalAlpha=1;
-    // Colour by type
     if(rz.type==='runner') X.fillStyle='#dd66ff';
     else if(rz.type==='tank') X.fillStyle='#ff2200';
     else if(rz.type==='crawler') X.fillStyle='#ffcc00';
@@ -685,11 +710,10 @@ function drawHUD(){
     X.beginPath();X.arc(rX+Math.sin(relA)*rR*rd,rY-Math.cos(relA)*rR*rd,dotR,0,Math.PI*2);X.fill();
   }
   X.shadowBlur=0;X.shadowColor='transparent';X.globalAlpha=1;
-  // Zombie count on radar
-  X.fillStyle='#ff6644';X.font='bold 10px Courier New';X.textAlign='center';
+  X.fillStyle='#2ea3f2';X.font='bold 10px Courier New';X.textAlign='center';
   X.fillText(zombies.length+' nearby',rX,rY+rR+14);
 
-  // Warning arrows
+  // Warning arrows — BB blue with red urgency
   for(var i=0;i<zombies.length;i++){
     var az=zombies[i];
     if(az.onScreen||az.dist>8) continue;
@@ -700,10 +724,13 @@ function drawHUD(){
     var aS=relA2>0?1:-1;
     var aX=aS>0?C.width-35:35;
     var aB=Math.sin(frameCount*0.15)*5*urg;
-    X.globalAlpha=0.5+urg*0.5;X.shadowColor='#ff3333';X.shadowBlur=8*urg;
-    X.fillStyle='#ff3333';
+    X.globalAlpha=0.5+urg*0.5;
+    // Colour shifts from blue to red as zombie gets closer
+    var arrCol=urg>0.7?'#ff3333':urg>0.4?'#ff8800':'#2ea3f2';
+    X.shadowColor=arrCol;X.shadowBlur=8*urg;
+    X.fillStyle=arrCol;
     X.beginPath();X.moveTo(aX+aS*15+aB*aS,C.height/2);X.lineTo(aX-aS*5,C.height/2-12);X.lineTo(aX-aS*5,C.height/2+12);X.closePath();X.fill();
-    X.shadowBlur=0;X.fillStyle='#ff6644';X.font='bold 11px Courier New';X.textAlign='center';
+    X.shadowBlur=0;X.fillStyle='#2ea3f2';X.font='bold 11px Courier New';X.textAlign='center';
     X.fillText(Math.round(az.dist)+'m',aX,C.height/2+24);X.globalAlpha=1;
   }
   X.shadowBlur=0;X.shadowColor='transparent';
@@ -711,16 +738,20 @@ function drawHUD(){
 
 // ─── AR OVERLAY ─────────────────────────────────
 function drawAROverlay(){
-  X.globalAlpha=0.12;X.fillStyle='#0a0005';
+  // Subtle dark blue tint
+  X.globalAlpha=0.1;X.fillStyle='#000510';
   X.fillRect(0,0,C.width,C.height);X.globalAlpha=1;
+  // Blue-tinted vignette
   var vg=X.createRadialGradient(C.width/2,C.height/2,C.width*0.25,C.width/2,C.height/2,C.width*0.75);
-  vg.addColorStop(0,'rgba(0,0,0,0)');vg.addColorStop(1,'rgba(0,0,0,0.4)');
+  vg.addColorStop(0,'rgba(0,0,0,0)');vg.addColorStop(1,'rgba(0,5,20,0.35)');
   X.fillStyle=vg;X.fillRect(0,0,C.width,C.height);
+  // Crosshair — BB blue/cyan
   var cx2=C.width/2,cy2=C.height/2;
-  X.strokeStyle='rgba(255,50,50,0.15)';X.lineWidth=1;
+  X.strokeStyle='rgba(46,163,242,0.2)';X.lineWidth=1;
   X.beginPath();X.arc(cx2,cy2,22,0,Math.PI*2);X.stroke();
-  X.fillStyle='rgba(255,50,50,0.2)';
+  X.fillStyle='rgba(0,255,255,0.25)';
   X.beginPath();X.arc(cx2,cy2,2,0,Math.PI*2);X.fill();
+  X.strokeStyle='rgba(46,163,242,0.2)';
   X.beginPath();X.moveTo(cx2-30,cy2);X.lineTo(cx2-8,cy2);X.stroke();
   X.beginPath();X.moveTo(cx2+8,cy2);X.lineTo(cx2+30,cy2);X.stroke();
   X.beginPath();X.moveTo(cx2,cy2-30);X.lineTo(cx2,cy2-8);X.stroke();
@@ -772,7 +803,7 @@ function handleTap(e){
   var hitIdx=-1;
   for(var i=zombies.length-1;i>=0;i--){ // check closest (front) first
     var z=zombies[i];
-    if(!z.onScreen) continue;
+    if(!z.onScreen||z.dying) continue;
     var zh=getZombieHeight(z.dist);
     var zw=zh*0.5;
     var bodyTop=z.y-zh;   // top of zombie (head)
@@ -815,11 +846,14 @@ function handleTap(e){
       }
       screenShakeX+=(Math.random()-0.5)*12;
       screenShakeY+=(Math.random()-0.5)*10;
-      if(z.mesh&&typeof xrScene!=='undefined') try{xrScene.remove(z.mesh);}catch(e){}
-      zombies.splice(hitIdx,1);
+      // Start death animation instead of removing instantly
+      z.dying=true;
+      z.deathTimer=1.0; // 1 second death animation
+      z.deathFallDir=(Math.random()-0.5)*2; // fall left or right
+      z.speed=0; // stop moving
       if(waveKills>=waveTarget){
         wave++;waveKills=0;
-        waveTarget=wave<=3?3+wave:Math.floor(3+wave*2); // 4,5,6 then ramps up
+        waveTarget=wave<=3?3+wave:Math.floor(3+wave*2);
         spawnInterval=Math.max(SPAWN_INTERVAL_MIN,SPAWN_INTERVAL_START-wave*100);
         sfxWave();screenFlash=15;
         if(hp<MAX_HP){hp++;spawnParticles(C.width/2,C.height*0.04,'#ff3333',12);}
@@ -895,6 +929,24 @@ function gameLoop(timestamp){
     // Update zombies
     for(var i=zombies.length-1;i>=0;i--){
       var z=zombies[i];
+
+      // Death animation
+      if(z.dying){
+        z.deathTimer-=dt;
+        if(z.deathTimer<=0){
+          if(z.mesh&&typeof xrScene!=='undefined') try{xrScene.remove(z.mesh);}catch(e){}
+          zombies.splice(i,1);
+          continue;
+        }
+        // Still project to screen so it draws
+        var relYaw2=angleDiff(z.worldAngle,camYaw-yawOffset);
+        var sx2=relYaw2/(CAM_FOV_H/2);
+        z.onScreen=Math.abs(sx2)<=1.4;
+        z.x=C.width/2+sx2*(C.width/2);
+        z.y=getZombieFeetY(z.dist);
+        continue;
+      }
+
       z.dist-=z.speed*dt*(1+wave*0.03);
       z.worldAngle+=Math.sin(z.wobble*0.5)*0.08;
       z.wobble+=z.wobbleSpeed;
@@ -1385,25 +1437,20 @@ function xrFrame(time,frame){
   if(screenFlash>0){X.fillStyle='rgba(100,255,100,'+(screenFlash*0.03)+')';X.fillRect(0,0,C.width,C.height);screenFlash--;}
   if(!gameOver){
     drawHUD();
-    // AR crosshair
+    // AR crosshair — BB blue/cyan
     var cx=C.width/2,cy=C.height/2;
-    X.strokeStyle='rgba(255,50,50,0.5)';X.lineWidth=2;
-    // Outer circle
+    X.strokeStyle='rgba(46,163,242,0.5)';X.lineWidth=2;
     X.beginPath();X.arc(cx,cy,24,0,Math.PI*2);X.stroke();
-    // Inner circle
-    X.strokeStyle='rgba(255,50,50,0.3)';X.lineWidth=1;
+    X.strokeStyle='rgba(0,255,255,0.3)';X.lineWidth=1;
     X.beginPath();X.arc(cx,cy,8,0,Math.PI*2);X.stroke();
-    // Center dot
-    X.fillStyle='rgba(255,50,50,0.6)';
+    X.fillStyle='rgba(0,255,255,0.6)';
     X.beginPath();X.arc(cx,cy,2,0,Math.PI*2);X.fill();
-    // Cross lines with gaps
-    X.strokeStyle='rgba(255,50,50,0.5)';X.lineWidth=2;
+    X.strokeStyle='rgba(46,163,242,0.5)';X.lineWidth=2;
     X.beginPath();X.moveTo(cx-35,cy);X.lineTo(cx-10,cy);X.stroke();
     X.beginPath();X.moveTo(cx+10,cy);X.lineTo(cx+35,cy);X.stroke();
     X.beginPath();X.moveTo(cx,cy-35);X.lineTo(cx,cy-10);X.stroke();
     X.beginPath();X.moveTo(cx,cy+10);X.lineTo(cx,cy+35);X.stroke();
-    // Corner ticks
-    X.strokeStyle='rgba(255,50,50,0.3)';X.lineWidth=1;
+    X.strokeStyle='rgba(0,255,255,0.3)';X.lineWidth=1;
     X.beginPath();X.moveTo(cx-17,cy-17);X.lineTo(cx-12,cy-12);X.stroke();
     X.beginPath();X.moveTo(cx+17,cy-17);X.lineTo(cx+12,cy-12);X.stroke();
     X.beginPath();X.moveTo(cx-17,cy+17);X.lineTo(cx-12,cy+12);X.stroke();

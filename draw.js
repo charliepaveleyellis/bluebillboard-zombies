@@ -428,73 +428,83 @@ function drawParticles(){
 
 // ─── HUD ────────────────────────────────────────
 function drawHUD(){
+  // Top bar — BB dark blue
   var hbg=X.createLinearGradient(0,0,0,80);
-  hbg.addColorStop(0,'rgba(0,0,0,0.8)');hbg.addColorStop(1,'rgba(0,0,0,0)');
+  hbg.addColorStop(0,'rgba(0,5,20,0.85)');hbg.addColorStop(1,'rgba(0,5,20,0)');
   X.fillStyle=hbg;X.fillRect(0,0,C.width,80);
-  X.fillStyle='rgba(255,50,50,0.4)';X.fillRect(0,0,C.width,2);
+  X.fillStyle='rgba(46,163,242,0.4)';X.fillRect(0,0,C.width,2);
 
-  X.fillStyle=useWebXR?'#33ff33':'#ff6644';X.font='bold 10px Courier New';X.textAlign='center';
+  // Mode indicator — BB blue
+  X.fillStyle=useWebXR?'#00ffff':'#2ea3f2';X.font='bold 10px Courier New';X.textAlign='center';
   X.fillText(useWebXR?'[ REAL AR ]':'[ CAMERA ]',C.width/2,14);
 
-  X.shadowColor='rgba(255,50,50,0.5)';X.shadowBlur=10;
+  // Score — white with BB blue glow
+  X.shadowColor='rgba(46,163,242,0.5)';X.shadowBlur=10;
   X.fillStyle='#fff';X.font='bold 36px Courier New';X.textAlign='center';
   X.fillText(score,C.width/2,46);
   X.shadowBlur=0;X.shadowColor='transparent';
   X.fillStyle='#ffdd00';X.font='10px Courier New';
   X.fillText('HI '+Math.max(highScore,score),C.width/2,60);
 
-  X.fillStyle='#ff6644';X.font='bold 16px Courier New';X.textAlign='left';
+  // Wave — BB blue
+  X.fillStyle='#2ea3f2';X.font='bold 16px Courier New';X.textAlign='left';
   X.fillText('W'+wave,16,28);
-  X.fillStyle='#ff4444';X.font='bold 12px Courier New';
+  X.fillStyle='#00ffff';X.font='bold 12px Courier New';
   X.fillText(kills+' KILLS',16,46);
 
+  // Hearts — red (danger colour stays)
   X.textAlign='right';
   var heartX=C.width-16;
   for(var i=MAX_HP-1;i>=0;i--){
     X.font='24px serif';
     if(i<hp){X.shadowColor='rgba(255,0,0,0.5)';X.shadowBlur=6;X.fillStyle='#ff3333';}
-    else{X.shadowBlur=0;X.shadowColor='transparent';X.fillStyle='#440000';}
+    else{X.shadowBlur=0;X.shadowColor='transparent';X.fillStyle='#1a0000';}
     X.fillText('\u2764',heartX,36);heartX-=28;
   }
   X.shadowBlur=0;X.shadowColor='transparent';
 
+  // Wave progress — BB blue to cyan gradient
   var progW=C.width-32,prog=Math.min(waveKills/waveTarget,1);
-  X.fillStyle='rgba(255,50,50,0.1)';X.fillRect(16,66,progW,4);
+  X.fillStyle='rgba(46,163,242,0.1)';X.fillRect(16,66,progW,4);
   var pg=X.createLinearGradient(16,0,16+progW*prog,0);
-  pg.addColorStop(0,'#ff3333');pg.addColorStop(1,'#ff8800');
+  pg.addColorStop(0,'#003d7a');pg.addColorStop(1,'#2ea3f2');
   X.fillStyle=pg;X.fillRect(16,66,progW*prog,4);
-  if(prog>0){X.shadowColor='#ff5500';X.shadowBlur=8;X.fillRect(16+progW*prog-4,65,4,6);X.shadowBlur=0;X.shadowColor='transparent';}
+  if(prog>0){X.shadowColor='#2ea3f2';X.shadowBlur=8;X.fillRect(16+progW*prog-4,65,4,6);X.shadowBlur=0;X.shadowColor='transparent';}
 
-  // Radar
+  // Radar — BB blue theme
   var rR=38,rX=C.width/2,rY=C.height-rR-24;
   X.globalAlpha=0.6;
   var rg=X.createRadialGradient(rX,rY,0,rX,rY,rR);
-  rg.addColorStop(0,'rgba(20,0,0,0.7)');rg.addColorStop(1,'rgba(0,0,0,0.4)');
+  rg.addColorStop(0,'rgba(0,10,30,0.7)');rg.addColorStop(1,'rgba(0,5,15,0.4)');
   X.fillStyle=rg;X.beginPath();X.arc(rX,rY,rR,0,Math.PI*2);X.fill();
-  X.strokeStyle='rgba(255,50,50,0.3)';X.lineWidth=1;
+  X.strokeStyle='rgba(46,163,242,0.3)';X.lineWidth=1;
   X.beginPath();X.arc(rX,rY,rR,0,Math.PI*2);X.stroke();
   X.beginPath();X.arc(rX,rY,rR*0.6,0,Math.PI*2);X.stroke();
   X.beginPath();X.arc(rX,rY,rR*0.3,0,Math.PI*2);X.stroke();
+  // Sweep line — cyan
   var sw=frameCount*0.03;
-  X.strokeStyle='rgba(255,80,50,0.2)';X.lineWidth=2;
+  X.strokeStyle='rgba(0,255,255,0.2)';X.lineWidth=2;
   X.beginPath();X.moveTo(rX,rY);X.lineTo(rX+Math.sin(sw)*rR,rY-Math.cos(sw)*rR);X.stroke();
-  X.strokeStyle='rgba(255,50,50,0.15)';X.lineWidth=1;
+  // Cross lines
+  X.strokeStyle='rgba(46,163,242,0.15)';X.lineWidth=1;
   X.beginPath();X.moveTo(rX-rR,rY);X.lineTo(rX+rR,rY);X.stroke();
   X.beginPath();X.moveTo(rX,rY-rR);X.lineTo(rX,rY+rR);X.stroke();
-  X.fillStyle='#00ff88';X.globalAlpha=1;
+  // Player dot — BB blue
+  X.fillStyle='#2ea3f2';X.globalAlpha=1;
   X.beginPath();X.arc(rX,rY,3,0,Math.PI*2);X.fill();
+  // FOV cone
   var fovR2=CAM_FOV_H/2*Math.PI/180;
-  X.fillStyle='rgba(255,255,255,0.04)';
+  X.fillStyle='rgba(46,163,242,0.06)';
   X.beginPath();X.moveTo(rX,rY);X.arc(rX,rY,rR,-Math.PI/2-fovR2,-Math.PI/2+fovR2);X.closePath();X.fill();
-  X.strokeStyle='rgba(255,255,255,0.2)';X.lineWidth=1;
+  X.strokeStyle='rgba(46,163,242,0.25)';X.lineWidth=1;
   X.beginPath();X.moveTo(rX,rY);X.lineTo(rX+Math.sin(-fovR2)*rR,rY-Math.cos(-fovR2)*rR);X.stroke();
   X.beginPath();X.moveTo(rX,rY);X.lineTo(rX+Math.sin(fovR2)*rR,rY-Math.cos(fovR2)*rR);X.stroke();
+  // Zombie dots — red (danger) on blue radar
   for(var i=0;i<zombies.length;i++){
     var rz=zombies[i];
     var relA=angleDiff(rz.worldAngle,camYaw-yawOffset)*Math.PI/180;
     var rd=Math.min(1,rz.dist/10);
     X.globalAlpha=1;
-    // Colour by type
     if(rz.type==='runner') X.fillStyle='#dd66ff';
     else if(rz.type==='tank') X.fillStyle='#ff2200';
     else if(rz.type==='crawler') X.fillStyle='#ffcc00';
@@ -504,11 +514,10 @@ function drawHUD(){
     X.beginPath();X.arc(rX+Math.sin(relA)*rR*rd,rY-Math.cos(relA)*rR*rd,dotR,0,Math.PI*2);X.fill();
   }
   X.shadowBlur=0;X.shadowColor='transparent';X.globalAlpha=1;
-  // Zombie count on radar
-  X.fillStyle='#ff6644';X.font='bold 10px Courier New';X.textAlign='center';
+  X.fillStyle='#2ea3f2';X.font='bold 10px Courier New';X.textAlign='center';
   X.fillText(zombies.length+' nearby',rX,rY+rR+14);
 
-  // Warning arrows
+  // Warning arrows — BB blue with red urgency
   for(var i=0;i<zombies.length;i++){
     var az=zombies[i];
     if(az.onScreen||az.dist>8) continue;
@@ -519,10 +528,13 @@ function drawHUD(){
     var aS=relA2>0?1:-1;
     var aX=aS>0?C.width-35:35;
     var aB=Math.sin(frameCount*0.15)*5*urg;
-    X.globalAlpha=0.5+urg*0.5;X.shadowColor='#ff3333';X.shadowBlur=8*urg;
-    X.fillStyle='#ff3333';
+    X.globalAlpha=0.5+urg*0.5;
+    // Colour shifts from blue to red as zombie gets closer
+    var arrCol=urg>0.7?'#ff3333':urg>0.4?'#ff8800':'#2ea3f2';
+    X.shadowColor=arrCol;X.shadowBlur=8*urg;
+    X.fillStyle=arrCol;
     X.beginPath();X.moveTo(aX+aS*15+aB*aS,C.height/2);X.lineTo(aX-aS*5,C.height/2-12);X.lineTo(aX-aS*5,C.height/2+12);X.closePath();X.fill();
-    X.shadowBlur=0;X.fillStyle='#ff6644';X.font='bold 11px Courier New';X.textAlign='center';
+    X.shadowBlur=0;X.fillStyle='#2ea3f2';X.font='bold 11px Courier New';X.textAlign='center';
     X.fillText(Math.round(az.dist)+'m',aX,C.height/2+24);X.globalAlpha=1;
   }
   X.shadowBlur=0;X.shadowColor='transparent';
@@ -530,16 +542,20 @@ function drawHUD(){
 
 // ─── AR OVERLAY ─────────────────────────────────
 function drawAROverlay(){
-  X.globalAlpha=0.12;X.fillStyle='#0a0005';
+  // Subtle dark blue tint
+  X.globalAlpha=0.1;X.fillStyle='#000510';
   X.fillRect(0,0,C.width,C.height);X.globalAlpha=1;
+  // Blue-tinted vignette
   var vg=X.createRadialGradient(C.width/2,C.height/2,C.width*0.25,C.width/2,C.height/2,C.width*0.75);
-  vg.addColorStop(0,'rgba(0,0,0,0)');vg.addColorStop(1,'rgba(0,0,0,0.4)');
+  vg.addColorStop(0,'rgba(0,0,0,0)');vg.addColorStop(1,'rgba(0,5,20,0.35)');
   X.fillStyle=vg;X.fillRect(0,0,C.width,C.height);
+  // Crosshair — BB blue/cyan
   var cx2=C.width/2,cy2=C.height/2;
-  X.strokeStyle='rgba(255,50,50,0.15)';X.lineWidth=1;
+  X.strokeStyle='rgba(46,163,242,0.2)';X.lineWidth=1;
   X.beginPath();X.arc(cx2,cy2,22,0,Math.PI*2);X.stroke();
-  X.fillStyle='rgba(255,50,50,0.2)';
+  X.fillStyle='rgba(0,255,255,0.25)';
   X.beginPath();X.arc(cx2,cy2,2,0,Math.PI*2);X.fill();
+  X.strokeStyle='rgba(46,163,242,0.2)';
   X.beginPath();X.moveTo(cx2-30,cy2);X.lineTo(cx2-8,cy2);X.stroke();
   X.beginPath();X.moveTo(cx2+8,cy2);X.lineTo(cx2+30,cy2);X.stroke();
   X.beginPath();X.moveTo(cx2,cy2-30);X.lineTo(cx2,cy2-8);X.stroke();
