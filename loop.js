@@ -45,6 +45,24 @@ function gameLoop(timestamp){
     // Update zombies
     for(var i=zombies.length-1;i>=0;i--){
       var z=zombies[i];
+
+      // Death animation
+      if(z.dying){
+        z.deathTimer-=dt;
+        if(z.deathTimer<=0){
+          if(z.mesh&&typeof xrScene!=='undefined') try{xrScene.remove(z.mesh);}catch(e){}
+          zombies.splice(i,1);
+          continue;
+        }
+        // Still project to screen so it draws
+        var relYaw2=angleDiff(z.worldAngle,camYaw-yawOffset);
+        var sx2=relYaw2/(CAM_FOV_H/2);
+        z.onScreen=Math.abs(sx2)<=1.4;
+        z.x=C.width/2+sx2*(C.width/2);
+        z.y=getZombieFeetY(z.dist);
+        continue;
+      }
+
       z.dist-=z.speed*dt*(1+wave*0.03);
       z.worldAngle+=Math.sin(z.wobble*0.5)*0.08;
       z.wobble+=z.wobbleSpeed;

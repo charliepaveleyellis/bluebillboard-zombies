@@ -18,22 +18,37 @@ function drawZombie(z){
   var big=z.isBig;
   var type=z.type||'normal';
 
-  // DEBUG: bright border to confirm new draw.js is running
-  X.strokeStyle='#ff00ff';X.lineWidth=3;
-  X.strokeRect(z.x-w/2,z.y-h,w,h);
-
   var feetY=z.y;
   var wobX=Math.sin(z.wobble)*4*s*5;
   var stepBounce=Math.abs(Math.sin(z.wobble*2))*3*s*4;
   var lean=Math.sin(z.wobble*0.5)*0.06;
-  // Crawlers lean forward more
   var crawlerLean=type==='crawler'?0.3:0;
   var cx=z.x+wobX;
   var bodyCenter=feetY-h*(type==='crawler'?0.35:0.5)-stepBounce;
 
+  // ── DEATH ANIMATION ──
+  var deathProgress=0;
+  if(z.dying){
+    deathProgress=1-Math.max(0,z.deathTimer); // 0 to 1
+    var fallAngle=deathProgress*Math.PI*0.45*(z.deathFallDir>0?1:-1); // fall sideways
+    var sinkY=deathProgress*deathProgress*h*0.3; // sink into ground
+    var deathScale=1-deathProgress*0.3; // shrink slightly
+    lean=fallAngle;
+    crawlerLean=0;
+    wobX=0;stepBounce=0;
+    cx=z.x;
+    bodyCenter=feetY-h*0.5+sinkY;
+    h*=deathScale;w*=deathScale;
+  }
+
   X.save();
   X.translate(cx,bodyCenter);
   X.rotate(lean+crawlerLean);
+
+  // Death fade
+  if(z.dying){
+    X.globalAlpha=Math.max(0,z.deathTimer);
+  }
 
   var distAlpha=Math.min(1,Math.max(0.15,s*2.5));
   X.globalAlpha=distAlpha;

@@ -43,7 +43,7 @@ function handleTap(e){
   var hitIdx=-1;
   for(var i=zombies.length-1;i>=0;i--){ // check closest (front) first
     var z=zombies[i];
-    if(!z.onScreen) continue;
+    if(!z.onScreen||z.dying) continue;
     var zh=getZombieHeight(z.dist);
     var zw=zh*0.5;
     var bodyTop=z.y-zh;   // top of zombie (head)
@@ -86,11 +86,14 @@ function handleTap(e){
       }
       screenShakeX+=(Math.random()-0.5)*12;
       screenShakeY+=(Math.random()-0.5)*10;
-      if(z.mesh&&typeof xrScene!=='undefined') try{xrScene.remove(z.mesh);}catch(e){}
-      zombies.splice(hitIdx,1);
+      // Start death animation instead of removing instantly
+      z.dying=true;
+      z.deathTimer=1.0; // 1 second death animation
+      z.deathFallDir=(Math.random()-0.5)*2; // fall left or right
+      z.speed=0; // stop moving
       if(waveKills>=waveTarget){
         wave++;waveKills=0;
-        waveTarget=wave<=3?3+wave:Math.floor(3+wave*2); // 4,5,6 then ramps up
+        waveTarget=wave<=3?3+wave:Math.floor(3+wave*2);
         spawnInterval=Math.max(SPAWN_INTERVAL_MIN,SPAWN_INTERVAL_START-wave*100);
         sfxWave();screenFlash=15;
         if(hp<MAX_HP){hp++;spawnParticles(C.width/2,C.height*0.04,'#ff3333',12);}
