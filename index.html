@@ -128,13 +128,31 @@ function updateOrientation(){
   camPitch+=(rawPitch-camPitch)*0.15;
 }
 
-// Convert an angle below horizontal to a screen Y position
-function angleToScreenY(angleBelowHorizontal){
-  // camPitch = where camera center points (degrees below horizontal)
-  // relAngle = how far this point is from camera center
-  var relAngle=angleBelowHorizontal-camPitch;
-  // Map to screen: positive relAngle = below center = lower on screen
-  return C.height/2+relAngle/(CAM_FOV_V/2)*(C.height/2);
+// Where the horizon (eye level) is on screen based on phone tilt
+// camPitch = degrees below horizontal the camera points
+// Higher camPitch = looking more at floor = horizon moves up
+function getHorizonY(){
+  // When looking horizontal (pitch=0), horizon is at screen center
+  // When looking 45 degrees down, horizon is near top
+  // Map: pitch 0 -> 50% screen, pitch 45 -> 10% screen
+  return C.height*Math.max(0.05,0.5-camPitch/90);
+}
+
+// Place zombie feet on the visible floor between horizon and screen bottom
+function getZombieFeetY(dist){
+  var horizY=getHorizonY();
+  var bottomY=C.height;  // bottom of screen = directly at your feet
+  // Close zombies (dist ~1) = feet near bottom, far (dist ~12) = feet near horizon
+  // Use inverse distance for perspective
+  var t=Math.min(1,1.0/dist);  // 1=very close, 0=far
+  // Perspective: near objects are near the bottom, far objects near horizon
+  return horizY+(bottomY-horizY)*(0.15+t*0.75);
+}
+
+// Zombie height so head is roughly at horizon (eye level)
+function getZombieHeight(feetY){
+  var horizY=getHorizonY();
+  return Math.max(20,feetY-horizY);
 }
 
 function angleDiff(a,b){
@@ -198,16 +216,11 @@ function drawZombie(z){
   if(!z.onScreen) return;
   var s=z.scale;
   if(s<0.03) return;
-  // Project feet and head onto screen using real camera angle
-  // Feet: on the floor at distance z.dist, angle below horizontal = atan(camHeight/dist)
-  var feetAngle=Math.atan2(CAM_HEIGHT,z.dist)*180/Math.PI;
-  // Head: at same height as camera = horizontal = 0 degrees
-  var headAngle=0;
-
-  var feetY=angleToScreenY(feetAngle);
-  var headY=angleToScreenY(headAngle);
-  var h=Math.max(20,feetY-headY);  // zombie height in pixels
+  // Feet on the real floor, head at eye level (horizon)
+  var feetY=z.y;
+  var h=getZombieHeight(feetY);
   var w=h*0.35;
+  var headY=feetY-h;
 
   var wobX=Math.sin(z.wobble)*3*(h/C.height*4);
   var wobY=Math.cos(z.wobble*0.7)*2*(h/C.height*4);
@@ -443,13 +456,10 @@ function handleTap(e){
     for(var i=zombies.length-1;i>=0;i--){
       var z=zombies[i];
       if(!z.onScreen) continue;
-      var fA=Math.atan2(CAM_HEIGHT,z.dist)*180/Math.PI;
-      var fY=angleToScreenY(fA);
-      var hY=angleToScreenY(0);
-      var zh2=Math.max(20,fY-hY);
+      var zh2=getZombieHeight(z.y);
       var zw2=zh2*0.35;
       var pad=20;
-      var zcx=z.x,zcy=(hY+fY)/2;
+      var zcx=z.x,zcy=z.y-zh2/2;
       if(tx>=zcx-zw2/2-pad&&tx<=zcx+zw2/2+pad&&
          ty>=zcy-zh2/2-pad&&ty<=zcy+zh2/2+pad){
         z.hp--;z.hitTimer=8;hit=true;
@@ -518,11 +528,6 @@ function gameLoop(timestamp){
       var relYaw=angleDiff(z.worldAngle,camYaw-yawOffset);
       var sx=relYaw/(CAM_FOV_H/2);  // -1 to 1
 
-      // Check if feet would be visible on screen
-      var feetAng=Math.atan2(CAM_HEIGHT,z.dist)*180/Math.PI;
-      var feetSY=angleToScreenY(feetAng);
-      var headSY=angleToScreenY(0);
-
       if(Math.abs(sx)>1.4){
         z.onScreen=false;
       } else {
@@ -533,8 +538,8 @@ function gameLoop(timestamp){
 
         // X: projected from world angle
         z.x=C.width/2+sx*(C.width/2);
-        // Y: calculated in drawZombie from camera angle + distance
-        z.y=feetSY;
+        // Y: feet placed on the real floor
+        z.y=getZombieFeetY(z.dist);
       }
 
       // Reached the player?
