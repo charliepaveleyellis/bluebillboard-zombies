@@ -1131,7 +1131,7 @@ async function startWebXR(){
       var camAngle=xrCamera.rotation.y;
       var angleDiff2=Math.abs(zombieAngle-camAngle);
       while(angleDiff2>Math.PI) angleDiff2=Math.abs(angleDiff2-Math.PI*2);
-      if(angleDiff2>0.5) continue; // ~30 degrees — must be aiming at it
+      if(angleDiff2>0.25) continue; // ~15 degrees — must aim directly at it
       if(z.dist<bestDist){bestDist=z.dist;bestIdx=i;}
     }
     if(bestIdx>=0){
