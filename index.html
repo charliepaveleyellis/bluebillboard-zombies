@@ -422,9 +422,11 @@ function handleTap(e){
       if(!z.onScreen) continue;
       var zh=getZombieHeight(z.dist);
       var zw=zh*0.35;
-      var pad=20;
+      // Big generous hitbox — minimum 50px wide, 60px tall, plus padding
+      var hitW=Math.max(50,zw)+40;
+      var hitH=Math.max(60,zh)+40;
       var zcx=z.x,zcy=z.y-zh/2;
-      if(tx>=zcx-zw/2-pad&&tx<=zcx+zw/2+pad&&ty>=zcy-zh/2-pad&&ty<=zcy+zh/2+pad){
+      if(tx>=zcx-hitW/2&&tx<=zcx+hitW/2&&ty>=zcy-hitH/2&&ty<=zcy+hitH/2){
         z.hp--;z.hitTimer=0.3;hit=true;
         if(z.hp<=0){
           kills++;waveKills++;score+=z.isBig?25:10;
@@ -614,7 +616,8 @@ async function startWebXR(){
   var viewerRef=await xrSession.requestReferenceSpace('viewer');
   xrHitTestSource=await xrSession.requestHitTestSource({space:viewerRef});
 
-  xrSession.addEventListener('select',function(){handleTap({changedTouches:[{clientX:C.width/2,clientY:C.height/2}]});});
+  // WebXR select fires on tap — but touch events on DOM overlay also work
+  // so we don't need to duplicate here
   xrSession.addEventListener('end',function(){xrSession=null;useWebXR=false;});
 
   useWebXR=true;
