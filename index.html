@@ -472,7 +472,7 @@ document.getElementById('startBtn').addEventListener('click', async () => {
     xrSession = await navigator.xr.requestSession('immersive-ar', {
       requiredFeatures: ['hit-test', 'local'],
       optionalFeatures: ['dom-overlay'],
-      domOverlay: { root: document.getElementById('overlay') }
+      domOverlay: { root: document.body }
     });
 
     renderer.xr.setReferenceSpaceType('local');
