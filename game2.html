@@ -1204,54 +1204,54 @@ function createXRZombie(isBig){
   var neck=new THREE.Mesh(new THREE.CylinderGeometry(0.05*sc,0.06*sc,0.1*sc,6),darkMat);
   neck.position.y=1.03*sc;g.add(neck);
 
-  // ── ARMS — reaching forward, with hands ──
+  // ── ARMS — hierarchical: upper arm > forearm > hand > claws ──
   var armMat=new THREE.MeshLambertMaterial({color:skinCol});
-  // Upper arms
+  var handMat=new THREE.MeshLambertMaterial({color:new THREE.Color(skinR*0.8,skinG*0.9,skinB*0.7)});
+  var clawMat=new THREE.MeshBasicMaterial({color:0x2a2015});
+
+  // Left arm chain
   var aL=new THREE.Mesh(new THREE.CylinderGeometry(0.04*sc,0.035*sc,0.35*sc,6),armMat);
   aL.position.set(-0.24*sc,0.88*sc,0.12*sc);aL.rotation.x=-0.9;aL.rotation.z=0.25;g.add(aL);
-  var aR=new THREE.Mesh(new THREE.CylinderGeometry(0.04*sc,0.035*sc,0.35*sc,6),armMat);
-  aR.position.set(0.24*sc,0.88*sc,0.12*sc);aR.rotation.x=-0.9;aR.rotation.z=-0.25;g.add(aR);
-  // Forearms
   var fL=new THREE.Mesh(new THREE.CylinderGeometry(0.035*sc,0.03*sc,0.3*sc,6),darkMat);
-  fL.position.set(-0.3*sc,0.72*sc,0.3*sc);fL.rotation.x=-0.5;fL.rotation.z=0.1;g.add(fL);
-  var fR=new THREE.Mesh(new THREE.CylinderGeometry(0.035*sc,0.03*sc,0.3*sc,6),darkMat);
-  fR.position.set(0.3*sc,0.72*sc,0.3*sc);fR.rotation.x=-0.5;fR.rotation.z=-0.1;g.add(fR);
-  // Hands — clawed
-  var handMat=new THREE.MeshLambertMaterial({color:new THREE.Color(skinR*0.8,skinG*0.9,skinB*0.7)});
+  fL.position.set(0,-0.2*sc,0.08*sc);fL.rotation.x=-0.4;aL.add(fL); // child of upper arm
   var hL=new THREE.Mesh(new THREE.SphereGeometry(0.035*sc,6,6),handMat);
-  hL.position.set(-0.32*sc,0.6*sc,0.4*sc);g.add(hL);
-  var hR=new THREE.Mesh(new THREE.SphereGeometry(0.035*sc,6,6),handMat);
-  hR.position.set(0.32*sc,0.6*sc,0.4*sc);g.add(hR);
-  // Fingers/claws
-  var clawMat=new THREE.MeshBasicMaterial({color:0x2a2015});
+  hL.position.set(0,-0.18*sc,0.04*sc);fL.add(hL); // child of forearm
   for(var ci=0;ci<3;ci++){
     var ca=(ci-1)*0.4;
     var clL=new THREE.Mesh(new THREE.CylinderGeometry(0.008*sc,0.004*sc,0.06*sc,4),clawMat);
-    clL.position.set((-0.32+Math.sin(ca)*0.03)*sc,0.56*sc,(0.43+Math.cos(ca)*0.02)*sc);
-    clL.rotation.x=-0.3;g.add(clL);
-    var clR=new THREE.Mesh(new THREE.CylinderGeometry(0.008*sc,0.004*sc,0.06*sc,4),clawMat);
-    clR.position.set((0.32+Math.sin(ca)*0.03)*sc,0.56*sc,(0.43+Math.cos(ca)*0.02)*sc);
-    clR.rotation.x=-0.3;g.add(clR);
+    clL.position.set(Math.sin(ca)*0.02*sc,-0.04*sc,Math.cos(ca)*0.02*sc);clL.rotation.x=-0.3;hL.add(clL);
   }
 
-  // ── LEGS — thicker, with knees ──
+  // Right arm chain
+  var aR=new THREE.Mesh(new THREE.CylinderGeometry(0.04*sc,0.035*sc,0.35*sc,6),armMat);
+  aR.position.set(0.24*sc,0.88*sc,0.12*sc);aR.rotation.x=-0.9;aR.rotation.z=-0.25;g.add(aR);
+  var fR=new THREE.Mesh(new THREE.CylinderGeometry(0.035*sc,0.03*sc,0.3*sc,6),darkMat);
+  fR.position.set(0,-0.2*sc,0.08*sc);fR.rotation.x=-0.4;aR.add(fR);
+  var hR=new THREE.Mesh(new THREE.SphereGeometry(0.035*sc,6,6),handMat);
+  hR.position.set(0,-0.18*sc,0.04*sc);fR.add(hR);
+  for(var ci=0;ci<3;ci++){
+    var ca=(ci-1)*0.4;
+    var clR=new THREE.Mesh(new THREE.CylinderGeometry(0.008*sc,0.004*sc,0.06*sc,4),clawMat);
+    clR.position.set(Math.sin(ca)*0.02*sc,-0.04*sc,Math.cos(ca)*0.02*sc);clR.rotation.x=-0.3;hR.add(clR);
+  }
+
+  // ── LEGS — hierarchical: thigh > shin > foot ──
   var legMat=new THREE.MeshLambertMaterial({color:darkCol});
-  // Thighs
+  var footMat=new THREE.MeshLambertMaterial({color:0x1a1815});
+  // Left leg chain
   var lL=new THREE.Mesh(new THREE.CylinderGeometry(0.07*sc,0.055*sc,0.4*sc,6),legMat);
   lL.position.set(-0.09*sc,0.3*sc,0);g.add(lL);
+  var sLeg=new THREE.Mesh(new THREE.CylinderGeometry(0.05*sc,0.04*sc,0.35*sc,6),darkMat);
+  sLeg.position.set(0,-0.22*sc,0);lL.add(sLeg); // child of thigh
+  var ftL=new THREE.Mesh(new THREE.BoxGeometry(0.07*sc,0.03*sc,0.12*sc),footMat);
+  ftL.position.set(0,-0.2*sc,0.03*sc);sLeg.add(ftL); // child of shin
+  // Right leg chain
   var lR=new THREE.Mesh(new THREE.CylinderGeometry(0.07*sc,0.055*sc,0.4*sc,6),legMat);
   lR.position.set(0.09*sc,0.3*sc,0);g.add(lR);
-  // Shins
-  var sLeg=new THREE.Mesh(new THREE.CylinderGeometry(0.05*sc,0.04*sc,0.35*sc,6),darkMat);
-  sLeg.position.set(-0.09*sc,0.0*sc,0);g.add(sLeg);
   var sReg=new THREE.Mesh(new THREE.CylinderGeometry(0.05*sc,0.04*sc,0.35*sc,6),darkMat);
-  sReg.position.set(0.09*sc,0.0*sc,0);g.add(sReg);
-  // Feet
-  var footMat=new THREE.MeshLambertMaterial({color:0x1a1815});
-  var ftL=new THREE.Mesh(new THREE.BoxGeometry(0.07*sc,0.03*sc,0.12*sc),footMat);
-  ftL.position.set(-0.09*sc,-0.15*sc,0.03*sc);g.add(ftL);
+  sReg.position.set(0,-0.22*sc,0);lR.add(sReg);
   var ftR=new THREE.Mesh(new THREE.BoxGeometry(0.07*sc,0.03*sc,0.12*sc),footMat);
-  ftR.position.set(0.09*sc,-0.15*sc,0.03*sc);g.add(ftR);
+  ftR.position.set(0,-0.2*sc,0.03*sc);sReg.add(ftR);
 
   // ── GROUND SHADOW ──
   var shadowGeo=new THREE.CircleGeometry(0.3*sc,16);shadowGeo.rotateX(-Math.PI/2);
