@@ -33,12 +33,12 @@ function gameLoop(timestamp){
       if(zombies.length>0) sfxMoan();
     }
 
-    // Spawn
+    // Spawn — early waves only spawn 1 at a time
     if(timestamp-lastSpawn>spawnInterval){
       spawnZombie();
-      if(wave>2&&Math.random()<0.35) spawnZombie();
-      if(wave>5&&Math.random()<0.25) spawnZombie();
-      if(wave>8&&Math.random()<0.15) spawnZombie();
+      if(wave>4&&Math.random()<0.3) spawnZombie();
+      if(wave>7&&Math.random()<0.25) spawnZombie();
+      if(wave>10&&Math.random()<0.15) spawnZombie();
       lastSpawn=timestamp;
     }
 
@@ -168,7 +168,7 @@ function startGame(){
     initAudio();
     if(audioCtx&&audioCtx.state==='suspended') audioCtx.resume();
     score=0;kills=0;wave=1;hp=MAX_HP;
-    waveKills=0;waveTarget=5;
+    waveKills=0;waveTarget=3;
     spawnInterval=SPAWN_INTERVAL_START;
     zombies=[];particles=[];bloodSplats=[];
     frameCount=0;lastSpawn=0;lastTime=0;lastMoan=0;

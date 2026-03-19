@@ -66,7 +66,7 @@ window.addEventListener('resize',resize);resize();
 
 // ─── CONFIG ─────────────────────────────────────
 var MAX_HP=5;
-var SPAWN_INTERVAL_START=2000;
+var SPAWN_INTERVAL_START=3500; // slower start
 var SPAWN_INTERVAL_MIN=400;
 
 // ─── STATE ──────────────────────────────────────
@@ -76,7 +76,7 @@ var highScore=parseInt(localStorage.getItem('bb_zombie_hi')||'0');
 var zombies=[];var particles=[];var bloodSplats=[];
 var frameCount=0;var lastSpawn=0;var lastMoan=0;
 var spawnInterval=SPAWN_INTERVAL_START;
-var waveKills=0,waveTarget=5;
+var waveKills=0,waveTarget=3; // wave 1 only needs 3 kills
 var screenFlash=0,damageFlash=0;
 var screenShakeX=0,screenShakeY=0;
 var combo=0,comboTimer=0;
@@ -98,16 +98,21 @@ function spawnZombie(){
   // Pick type based on wave
   var typeRoll=Math.random();
   var type='normal';
-  if(wave>=3&&typeRoll<0.15) type='runner';
-  if(wave>=4&&typeRoll<0.1) type='tank';
-  if(wave>=5&&typeRoll<0.08) type='crawler';
+  if(wave>=5&&typeRoll<0.15) type='runner';  // runners from wave 5
+  if(wave>=7&&typeRoll<0.1) type='tank';     // tanks from wave 7
+  if(wave>=8&&typeRoll<0.08) type='crawler';  // crawlers from wave 8
+
+  // Early waves: slower, 1 HP. Ramps up gradually.
+  var baseSpeed=wave<=2?0.3:wave<=4?0.4:0.5;
+  var speedVar=wave<=2?0.15:wave<=4?0.25:0.4;
+  var baseHp=wave<=3?1:1+Math.floor((wave-3)/3);
 
   var z={
     worldAngle:Math.random()*360,
-    dist:7+Math.random()*5,
-    speed:0.5+Math.random()*0.4,
-    hp:1+Math.floor(wave/4),
-    maxHp:1+Math.floor(wave/4),
+    dist:wave<=2?9+Math.random()*4:7+Math.random()*5, // spawn further in early waves
+    speed:baseSpeed+Math.random()*speedVar,
+    hp:baseHp,
+    maxHp:baseHp,
     hitTimer:0,
     wobble:Math.random()*Math.PI*2,
     wobbleSpeed:0.02+Math.random()*0.03,

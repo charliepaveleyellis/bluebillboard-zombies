@@ -90,7 +90,7 @@ function handleTap(e){
       zombies.splice(hitIdx,1);
       if(waveKills>=waveTarget){
         wave++;waveKills=0;
-        waveTarget=Math.floor(5+wave*2.5);
+        waveTarget=wave<=3?3+wave:Math.floor(3+wave*2); // 4,5,6 then ramps up
         spawnInterval=Math.max(SPAWN_INTERVAL_MIN,SPAWN_INTERVAL_START-wave*100);
         sfxWave();screenFlash=15;
         if(hp<MAX_HP){hp++;spawnParticles(C.width/2,C.height*0.04,'#ff3333',12);}
