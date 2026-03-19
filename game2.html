@@ -1411,28 +1411,60 @@ function xrFrame(time,frame){
   xrRenderer.render(xrScene,xrCamera);
 }
 
-// Show AR button if supported
-if(navigator.xr&&navigator.xr.isSessionSupported){
-  navigator.xr.isSessionSupported('immersive-ar').then(function(ok){
-    if(ok){
-      var arBtn=document.getElementById('arBtn');if(arBtn)arBtn.style.display='inline-block';
-      var s=document.createElement('script');s.src='https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.min.js';
-      document.head.appendChild(s);
-    }
-  }).catch(function(){});
+// Show AR button on all mobile devices — WebXR on Android, Variant Launch on iOS
+var isMobileDevice=/Mobi|Android|iPhone|iPad/i.test(navigator.userAgent);
+if(isMobileDevice){
+  var arBtn=document.getElementById('arBtn');
+  if(arBtn) arBtn.style.display='inline-block';
+  // Preload Three.js
+  var s=document.createElement('script');s.src='https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.min.js';
+  document.head.appendChild(s);
+  // Check native WebXR support
+  if(navigator.xr&&navigator.xr.isSessionSupported){
+    navigator.xr.isSessionSupported('immersive-ar').then(function(ok){
+      if(ok) arBtn.textContent='Real AR Mode';
+      else arBtn.textContent='Real AR Mode (needs Chrome)';
+    }).catch(function(){arBtn.textContent='Real AR Mode (needs Chrome)';});
+  } else {
+    arBtn.textContent='Real AR Mode (needs Chrome on Android)';
+  }
 }
 
 document.getElementById('arBtn').onclick=function(e){
   if(e)e.preventDefault();initAudio();if(audioCtx&&audioCtx.state==='suspended')audioCtx.resume();
-  var arBtn=document.getElementById('arBtn');arBtn.textContent='Loading AR...';
-  try{startWebXR().then(function(){
-    score=0;kills=0;wave=1;hp=MAX_HP;waveKills=0;waveTarget=5;spawnInterval=SPAWN_INTERVAL_START;
-    zombies=[];particles=[];frameCount=0;lastSpawn=0;gameOver=false;screenFlash=0;damageFlash=0;
-    document.getElementById('startScreen').classList.add('hidden');
-    document.getElementById('endScreen').classList.add('hidden');
-    running=true;arBtn.textContent='AR ACTIVE';arBtn.style.borderColor='#33ff33';
-  }).catch(function(err){arBtn.textContent='FAILED: '+err.message;arBtn.style.borderColor='#ff0000';});
-  }catch(err2){arBtn.textContent='ERROR: '+err2.message;arBtn.style.borderColor='#ff0000';}
+  var arBtn=document.getElementById('arBtn');
+
+  // Check if WebXR is available (Android Chrome, or Variant Launch on iOS)
+  if(!navigator.xr||!navigator.xr.isSessionSupported){
+    arBtn.textContent='AR needs Chrome on Android';
+    arBtn.style.borderColor='#ff0000';
+    setTimeout(function(){arBtn.textContent='Real AR Mode';arBtn.style.borderColor='#33ff33';},3000);
+    // Fall back to camera mode
+    initCamera();initGyro();startGame();
+    return;
+  }
+
+  navigator.xr.isSessionSupported('immersive-ar').then(function(ok){
+    if(!ok){
+      arBtn.textContent='AR not supported on this device';
+      arBtn.style.borderColor='#ff0000';
+      setTimeout(function(){arBtn.textContent='Real AR Mode';arBtn.style.borderColor='#33ff33';},3000);
+      initCamera();initGyro();startGame();
+      return;
+    }
+    arBtn.textContent='Loading AR...';
+    try{startWebXR().then(function(){
+      score=0;kills=0;wave=1;hp=MAX_HP;waveKills=0;waveTarget=3;spawnInterval=SPAWN_INTERVAL_START;
+      zombies=[];particles=[];frameCount=0;lastSpawn=0;gameOver=false;screenFlash=0;damageFlash=0;
+      document.getElementById('startScreen').classList.add('hidden');
+      document.getElementById('endScreen').classList.add('hidden');
+      running=true;arBtn.textContent='AR ACTIVE';arBtn.style.borderColor='#33ff33';
+    }).catch(function(err){arBtn.textContent='FAILED: '+err.message;arBtn.style.borderColor='#ff0000';});
+    }catch(err2){arBtn.textContent='ERROR: '+err2.message;arBtn.style.borderColor='#ff0000';}
+  }).catch(function(){
+    arBtn.textContent='AR check failed';arBtn.style.borderColor='#ff0000';
+    initCamera();initGyro();startGame();
+  });
 };
 
 </script>
