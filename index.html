@@ -182,11 +182,16 @@ function drawZombie(z){
   if(!z.onScreen) return;
   var s=z.scale;
   if(s<0.03) return;
-  var w=70*s,h=180*s;  // tall — full human height
+  // Height scales so at close range (s~2.5) zombie fills floor to eye level
+  // Screen height from floor to center ~ C.height*0.42
+  // At s=1 zombie should be about half screen, at s=2.5 full floor-to-eye
+  var zombieH=C.height*0.42*Math.min(1,s/2.0);  // height in pixels, maxes out filling floor to center
+  var zombieW=zombieH*0.38;  // proportional width
+  var w=zombieW,h=zombieH;
   var wobX=Math.sin(z.wobble)*4*s;
   var wobY=Math.cos(z.wobble*0.7)*2*s;
-  // Position: feet at z.y (bottom), body center drawn upward from there
-  var cx=z.x+wobX,cy=z.y-h*0.35+wobY;  // center of body is above feet
+  // Anchor from feet (z.y = ground), body center is halfway up
+  var cx=z.x+wobX,cy=z.y-h*0.5+wobY;
 
   X.save();
   X.translate(cx,cy);
@@ -417,11 +422,12 @@ function handleTap(e){
     for(var i=zombies.length-1;i>=0;i--){
       var z=zombies[i];
       if(!z.onScreen) continue;
-      var zw=70*z.scale,zh=180*z.scale;
-      var pad=18*z.scale;
-      var zcx=z.x,zcy=z.y-zh*0.35;  // center of body above feet
-      if(tx>=zcx-zw/2-pad&&tx<=zcx+zw/2+pad&&
-         ty>=zcy-zh*0.5-pad&&ty<=zcy+zh*0.5+pad){
+      var zh2=C.height*0.42*Math.min(1,z.scale/2.0);
+      var zw2=zh2*0.38;
+      var pad=20;
+      var zcx=z.x,zcy=z.y-zh2*0.5;
+      if(tx>=zcx-zw2/2-pad&&tx<=zcx+zw2/2+pad&&
+         ty>=zcy-zh2/2-pad&&ty<=zcy+zh2/2+pad){
         z.hp--;z.hitTimer=8;hit=true;
 
         if(z.hp<=0){
@@ -501,7 +507,7 @@ function gameLoop(timestamp){
         z.x=C.width/2+sx*(C.width/2);
 
         // Y: feet on the ground
-        z.y=C.height*0.92;
+        z.y=C.height*0.97;  // feet at very bottom of screen
       }
 
       // Reached the player?
