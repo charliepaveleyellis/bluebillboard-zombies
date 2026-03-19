@@ -563,10 +563,16 @@ async function checkWebXR(){
 
 async function startWebXR(){
   // Dynamically load Three.js
-  var script=document.createElement('script');
-  script.src='https://cdn.jsdelivr.net/npm/three@0.168.0/build/three.min.js';
-  document.head.appendChild(script);
-  await new Promise(function(r){script.onload=r;});
+  if(typeof THREE==='undefined'){
+    var script=document.createElement('script');
+    script.src='https://cdn.jsdelivr.net/npm/three@0.168.0/build/three.min.js';
+    document.head.appendChild(script);
+    await new Promise(function(resolve,reject){
+      script.onload=resolve;
+      script.onerror=function(){reject(new Error('Failed to load 3D engine'));};
+      setTimeout(function(){reject(new Error('3D engine load timeout'));},10000);
+    });
+  }
 
   xrScene=new THREE.Scene();
   xrCamera=new THREE.PerspectiveCamera(70,window.innerWidth/window.innerHeight,0.01,100);
@@ -779,18 +785,28 @@ document.getElementById('arBtn').onclick=function(e){
   initAudio();
   if(audioCtx&&audioCtx.state==='suspended') audioCtx.resume();
 
-  startWebXR().then(function(){
-    score=0;kills=0;wave=1;hp=MAX_HP;
-    waveKills=0;waveTarget=5;spawnInterval=SPAWN_INTERVAL_START;
-    zombies=[];particles=[];frameCount=0;lastSpawn=0;
-    gameOver=false;screenFlash=0;damageFlash=0;
-    document.getElementById('startScreen').classList.add('hidden');
-    document.getElementById('endScreen').classList.add('hidden');
-    running=true;
-  }).catch(function(err){
-    alert('AR failed: '+err.message+'. Using camera mode instead.');
+  var arBtn=document.getElementById('arBtn');
+  arBtn.textContent='Loading AR...';
+
+  try{
+    startWebXR().then(function(){
+      score=0;kills=0;wave=1;hp=MAX_HP;
+      waveKills=0;waveTarget=5;spawnInterval=SPAWN_INTERVAL_START;
+      zombies=[];particles=[];frameCount=0;lastSpawn=0;
+      gameOver=false;screenFlash=0;damageFlash=0;
+      document.getElementById('startScreen').classList.add('hidden');
+      document.getElementById('endScreen').classList.add('hidden');
+      running=true;
+    }).catch(function(err){
+      arBtn.textContent='AR Failed - '+err.message;
+      setTimeout(function(){arBtn.textContent='Real AR Mode (Android)';},3000);
+      initCamera();initGyro();startGame();
+    });
+  }catch(err2){
+    arBtn.textContent='AR Error - '+err2.message;
+    setTimeout(function(){arBtn.textContent='Real AR Mode (Android)';},3000);
     initCamera();initGyro();startGame();
-  });
+  }
 };
 </script>
 </body>
