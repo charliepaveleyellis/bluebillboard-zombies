@@ -49,6 +49,7 @@ canvas{position:fixed;top:0;left:0;width:100%;height:100%;z-index:1;}
   <h1>Zombie AR</h1>
   <h2>Zombies come from all around you!<br>Turn your phone to find them!<br>Tap to shoot before they reach you!</h2>
   <button class="btn" id="startBtn">Survive!</button>
+  <button class="btn" id="arBtn" style="display:none;background:#003300;border-color:#33ff33;margin-top:10px;font-size:14px;padding:12px 36px;">Real AR Mode (Android)</button>
 </div>
 
 <div class="overlay hidden" id="endScreen">
@@ -743,29 +744,8 @@ function onStartTap(e){
   initCamera();
   initGyro();
 
-  // Check WebXR synchronously — only attempt if API exists
-  var canXR=!!(navigator.xr&&navigator.xr.isSessionSupported);
-
-  if(canXR){
-    navigator.xr.isSessionSupported('immersive-ar').then(function(supported){
-      if(supported){
-        startWebXR().then(function(){
-          score=0;kills=0;wave=1;hp=MAX_HP;
-          waveKills=0;waveTarget=5;spawnInterval=SPAWN_INTERVAL_START;
-          zombies=[];particles=[];frameCount=0;lastSpawn=0;
-          gameOver=false;screenFlash=0;damageFlash=0;
-          document.getElementById('startScreen').classList.add('hidden');
-          document.getElementById('endScreen').classList.add('hidden');
-          running=true;
-        }).catch(function(){startGame();});
-      } else {
-        startGame();
-      }
-    }).catch(function(){startGame();});
-  } else {
-    // No WebXR (iOS, older browsers) — go straight to canvas+gyro
-    startGame();
-  }
+  // Always start with canvas+gyro mode — works everywhere
+  startGame();
 }
 
 function onRestartTap(e){
@@ -786,6 +766,32 @@ function onRestartTap(e){
 // Simple click binding — works on both iOS and Android
 document.getElementById('startBtn').onclick=onStartTap;
 document.getElementById('restartBtn').onclick=onRestartTap;
+
+// Show AR button only if WebXR is available (Android Chrome)
+if(navigator.xr&&navigator.xr.isSessionSupported){
+  navigator.xr.isSessionSupported('immersive-ar').then(function(ok){
+    if(ok) document.getElementById('arBtn').style.display='inline-block';
+  }).catch(function(){});
+}
+
+document.getElementById('arBtn').onclick=function(e){
+  if(e) e.preventDefault();
+  initAudio();
+  if(audioCtx&&audioCtx.state==='suspended') audioCtx.resume();
+
+  startWebXR().then(function(){
+    score=0;kills=0;wave=1;hp=MAX_HP;
+    waveKills=0;waveTarget=5;spawnInterval=SPAWN_INTERVAL_START;
+    zombies=[];particles=[];frameCount=0;lastSpawn=0;
+    gameOver=false;screenFlash=0;damageFlash=0;
+    document.getElementById('startScreen').classList.add('hidden');
+    document.getElementById('endScreen').classList.add('hidden');
+    running=true;
+  }).catch(function(err){
+    alert('AR failed: '+err.message+'. Using camera mode instead.');
+    initCamera();initGyro();startGame();
+  });
+};
 </script>
 </body>
 </html>
