@@ -304,13 +304,22 @@ function drawHUD(){
   X.fillStyle='rgba(0,0,0,0.7)';X.fillRect(0,0,C.width,75);
   X.fillStyle='rgba(255,50,50,0.3)';X.fillRect(0,73,C.width,2);
 
+  // Mode indicator
+  if(useWebXR){
+    X.fillStyle='#33ff33';X.font='bold 10px Courier New';X.textAlign='center';
+    X.fillText('REAL AR MODE',C.width/2,14);
+  } else {
+    X.fillStyle='#ff6644';X.font='bold 10px Courier New';X.textAlign='center';
+    X.fillText('CAMERA MODE',C.width/2,14);
+  }
+
   // Score
   X.fillStyle='#fff';X.font='bold 32px Courier New';X.textAlign='center';
-  X.fillText(score,C.width/2,40);
+  X.fillText(score,C.width/2,42);
 
   // High score
   X.fillStyle='#ffdd00';X.font='11px Courier New';
-  X.fillText('BEST: '+Math.max(highScore,score),C.width/2,55);
+  X.fillText('BEST: '+Math.max(highScore,score),C.width/2,57);
 
   // Wave
   X.fillStyle='#ff6644';X.font='bold 14px Courier New';X.textAlign='left';
@@ -562,17 +571,22 @@ async function checkWebXR(){
 }
 
 async function startWebXR(){
-  // Dynamically load Three.js
+  // Wait for Three.js if not loaded yet
   if(typeof THREE==='undefined'){
-    var script=document.createElement('script');
-    script.src='https://cdn.jsdelivr.net/npm/three@0.168.0/build/three.min.js';
-    document.head.appendChild(script);
     await new Promise(function(resolve,reject){
-      script.onload=resolve;
-      script.onerror=function(){reject(new Error('Failed to load 3D engine'));};
-      setTimeout(function(){reject(new Error('3D engine load timeout'));},10000);
+      var check=setInterval(function(){
+        if(typeof THREE!=='undefined'){clearInterval(check);resolve();}
+      },100);
+      setTimeout(function(){clearInterval(check);reject(new Error('3D engine not loaded'));},10000);
     });
   }
+
+  // Request XR session FIRST (must be in user gesture)
+  xrSession=await navigator.xr.requestSession('immersive-ar',{
+    requiredFeatures:['hit-test','local'],
+    optionalFeatures:['dom-overlay'],
+    domOverlay:{root:document.body}
+  });
 
   xrScene=new THREE.Scene();
   xrCamera=new THREE.PerspectiveCamera(70,window.innerWidth/window.innerHeight,0.01,100);
@@ -592,11 +606,7 @@ async function startWebXR(){
   var dl=new THREE.DirectionalLight(0xffffff,0.8);dl.position.set(1,3,2);xrScene.add(dl);
   xrScene.add(new THREE.PointLight(0xff3333,0.5,10));
 
-  xrSession=await navigator.xr.requestSession('immersive-ar',{
-    requiredFeatures:['hit-test','local'],
-    optionalFeatures:['dom-overlay'],
-    domOverlay:{root:document.body}
-  });
+  // Session already requested above
   xrRenderer.xr.setReferenceSpaceType('local');
   await xrRenderer.xr.setSession(xrSession);
 
@@ -774,9 +784,18 @@ document.getElementById('startBtn').onclick=onStartTap;
 document.getElementById('restartBtn').onclick=onRestartTap;
 
 // Show AR button only if WebXR is available (Android Chrome)
+// Also preload Three.js so it's ready when AR button is tapped
+var threeLoaded=false;
 if(navigator.xr&&navigator.xr.isSessionSupported){
   navigator.xr.isSessionSupported('immersive-ar').then(function(ok){
-    if(ok) document.getElementById('arBtn').style.display='inline-block';
+    if(ok){
+      document.getElementById('arBtn').style.display='inline-block';
+      // Preload Three.js
+      var s=document.createElement('script');
+      s.src='https://cdn.jsdelivr.net/npm/three@0.168.0/build/three.min.js';
+      s.onload=function(){threeLoaded=true;};
+      document.head.appendChild(s);
+    }
   }).catch(function(){});
 }
 
