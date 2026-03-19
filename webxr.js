@@ -41,6 +41,35 @@ async function startWebXR(){
   var viewerRef=await xrSession.requestReferenceSpace('viewer');
   xrHitTestSource=await xrSession.requestHitTestSource({space:viewerRef});
 
+  // In WebXR, regular touch events don't fire — use XR select event for taps
+  xrSession.addEventListener('select',function(){
+    if(!running||gameOver) return;
+    // In AR mode, shoot the nearest zombie (aim with crosshair)
+    sfxShoot();
+    spawnParticles(C.width/2,C.height/2,'#ffaa00',3);
+    var bestIdx=-1,bestDist=99999;
+    for(var i=0;i<zombies.length;i++){
+      var z=zombies[i];
+      if(z.dist<bestDist){bestDist=z.dist;bestIdx=i;}
+    }
+    if(bestIdx>=0){
+      var z=zombies[bestIdx];
+      z.hp--;z.hitTimer=0.3;
+      if(z.hp<=0){
+        kills++;waveKills++;score+=z.isBig?25:10;
+        sfxKill();
+        if(z.mesh) xrScene.remove(z.mesh);
+        zombies.splice(bestIdx,1);
+        if(waveKills>=waveTarget){
+          wave++;waveKills=0;
+          waveTarget=Math.floor(5+wave*2.5);
+          spawnInterval=Math.max(SPAWN_INTERVAL_MIN,SPAWN_INTERVAL_START-wave*100);
+          sfxWave();screenFlash=10;
+        }
+      }
+    }
+  });
+
   xrSession.addEventListener('end',function(){xrSession=null;useWebXR=false;});
 
   useWebXR=true;
