@@ -816,15 +816,14 @@ document.getElementById('arBtn').onclick=function(e){
       document.getElementById('startScreen').classList.add('hidden');
       document.getElementById('endScreen').classList.add('hidden');
       running=true;
+      arBtn.textContent='AR ACTIVE';arBtn.style.borderColor='#33ff33';
     }).catch(function(err){
-      arBtn.textContent='AR Failed - '+err.message;
-      setTimeout(function(){arBtn.textContent='Real AR Mode (Android)';},3000);
-      initCamera();initGyro();startGame();
+      arBtn.textContent='FAILED: '+err.message;
+      arBtn.style.borderColor='#ff0000';
     });
   }catch(err2){
-    arBtn.textContent='AR Error - '+err2.message;
-    setTimeout(function(){arBtn.textContent='Real AR Mode (Android)';},3000);
-    initCamera();initGyro();startGame();
+    arBtn.textContent='ERROR: '+err2.message;
+    arBtn.style.borderColor='#ff0000';
   }
 };
 </script>
