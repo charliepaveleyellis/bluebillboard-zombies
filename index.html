@@ -3,6 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<script src="https://launchar.app/sdk/v1?key=WEpuJOfaF1vpvtwg7gggdjDdJAKUsbi&redirect=true"></script>
 <title>Blue Billboard - Zombie AR</title>
 <style>
 *{margin:0;padding:0;box-sizing:border-box;}
@@ -1419,14 +1420,13 @@ if(isMobileDevice){
   // Preload Three.js
   var s=document.createElement('script');s.src='https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.min.js';
   document.head.appendChild(s);
-  // Check native WebXR support
+  // Check WebXR support (native on Android, Variant Launch provides it on iOS)
+  arBtn.textContent='Real AR Mode';
   if(navigator.xr&&navigator.xr.isSessionSupported){
     navigator.xr.isSessionSupported('immersive-ar').then(function(ok){
       if(ok) arBtn.textContent='Real AR Mode';
-      else arBtn.textContent='Real AR Mode (needs Chrome)';
-    }).catch(function(){arBtn.textContent='Real AR Mode (needs Chrome)';});
-  } else {
-    arBtn.textContent='Real AR Mode (needs Chrome on Android)';
+      else arBtn.textContent='Real AR Mode (loading...)';
+    }).catch(function(){arBtn.textContent='Real AR Mode';});
   }
 }
 
@@ -1436,11 +1436,9 @@ document.getElementById('arBtn').onclick=function(e){
 
   // Check if WebXR is available (Android Chrome, or Variant Launch on iOS)
   if(!navigator.xr||!navigator.xr.isSessionSupported){
-    arBtn.textContent='AR needs Chrome on Android';
-    arBtn.style.borderColor='#ff0000';
+    arBtn.textContent='AR loading... tap again in a moment';
+    arBtn.style.borderColor='#ffaa00';
     setTimeout(function(){arBtn.textContent='Real AR Mode';arBtn.style.borderColor='#33ff33';},3000);
-    // Fall back to camera mode
-    initCamera();initGyro();startGame();
     return;
   }
 
