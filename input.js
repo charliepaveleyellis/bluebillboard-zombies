@@ -19,44 +19,97 @@ function handleTap(e){
   if(tx===undefined||ty===undefined) return;
 
   lastTapX=tx;lastTapY=ty;tapFired=true;
-  sfxShoot();spawnParticles(tx,ty,'#ffaa00',3);
+  sfxShoot();
+  muzzleFlash=5;
 
-  // Find nearest on-screen zombie — ANY tap kills the closest one
+  // Muzzle flash particles
+  spawnParticles(tx,ty,'#ffcc00',4);
+  spawnParticles(tx,ty,'#ffffff',2);
+
+  // Find nearest on-screen zombie
   var bestIdx=-1,bestDist=99999;
   for(var i=0;i<zombies.length;i++){
     var z=zombies[i];
     if(!z.onScreen) continue;
-    // Just find the closest zombie to tap point, no max distance
     var dx=tx-z.x,dy=ty-(z.y-getZombieHeight(z.dist)/2);
     var d=Math.sqrt(dx*dx+dy*dy);
     if(d<bestDist){bestDist=d;bestIdx=i;}
   }
   if(bestIdx>=0){
     var z=zombies[bestIdx];
-    z.hp--;z.hitTimer=0.3;
+    z.hp--;z.hitTimer=0.4;
+
+    // Screen shake on hit
+    screenShakeX+=(Math.random()-0.5)*6;
+    screenShakeY+=(Math.random()-0.5)*4;
+
     if(z.hp<=0){
-      // Kill — remove immediately
-      kills++;waveKills++;score+=z.isBig?25:10;
+      // KILL!
+      kills++;waveKills++;
+      combo++;comboTimer=2;
+      var points=z.isBig?25:10;
+      points*=Math.min(combo,10); // combo multiplier!
+      score+=points;
+
+      if(combo>=3) sfxHeadshot();
       sfxKill();
+
       var zh2=getZombieHeight(z.dist);
-      spawnParticles(z.x,z.y-zh2/2,'#4a7a4a',15);
-      spawnParticles(z.x,z.y-zh2/2,'#ff3333',10);
-      spawnParticles(z.x,z.y-zh2/2,'#ffaa00',5);
-      // Remove from AR scene if in WebXR
+      var killX=z.x,killY=z.y-zh2/2;
+
+      // Big death explosion
+      spawnParticles(killX,killY,'#3a6a3a',20);
+      spawnParticles(killX,killY,'#ff2200',15);
+      spawnParticles(killX,killY,'#880000',10);
+      spawnParticles(killX,killY,'#ffaa00',5);
+
+      // Blood splat on ground
+      bloodSplats.push({
+        x:killX+(Math.random()-0.5)*30,
+        y:z.y+Math.random()*10,
+        w:15+Math.random()*25,h:5+Math.random()*10,
+        rot:Math.random()*Math.PI,
+        color:'rgba('+(80+Math.random()*40)+',0,0,1)',
+        life:1
+      });
+      // Extra splats
+      for(var si=0;si<2;si++){
+        bloodSplats.push({
+          x:killX+(Math.random()-0.5)*60,
+          y:z.y+Math.random()*15-5,
+          w:8+Math.random()*15,h:3+Math.random()*8,
+          rot:Math.random()*Math.PI,
+          color:'rgba('+(60+Math.random()*50)+',0,0,1)',
+          life:0.8+Math.random()*0.2
+        });
+      }
+
+      // Screen shake on kill
+      screenShakeX+=(Math.random()-0.5)*12;
+      screenShakeY+=(Math.random()-0.5)*10;
+
+      // Remove from AR scene if WebXR
       if(z.mesh&&typeof xrScene!=='undefined') try{xrScene.remove(z.mesh);}catch(e){}
       zombies.splice(bestIdx,1);
+
+      // Wave check
       if(waveKills>=waveTarget){
         wave++;waveKills=0;
         waveTarget=Math.floor(5+wave*2.5);
         spawnInterval=Math.max(SPAWN_INTERVAL_MIN,SPAWN_INTERVAL_START-wave*100);
-        sfxWave();screenFlash=10;
+        sfxWave();screenFlash=15;
+        // Big screen shake for wave complete
+        screenShakeX+=(Math.random()-0.5)*20;
+        screenShakeY+=(Math.random()-0.5)*15;
       }
     } else {
-      // Hit but not dead — show damage
-      spawnParticles(tx,ty,'#ff0000',6);
+      // Hit but alive — blood spray
+      spawnParticles(tx,ty,'#ff0000',8);
+      spawnParticles(tx,ty,'#880000',4);
     }
   } else {
-    spawnParticles(tx,ty,'rgba(150,150,150,0.5)',2);
+    // Miss
+    spawnParticles(tx,ty,'rgba(150,150,150,0.4)',3);
   }
 }
 
