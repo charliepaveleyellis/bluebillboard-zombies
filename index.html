@@ -379,7 +379,7 @@ function drawHUD(){
     X.fillStyle=rz.type==='big'?'#ff0000':'#ff4444';
     X.beginPath();X.arc(radarX+Math.sin(relA)*radarR*rd,radarY-Math.cos(relA)*radarR*rd,rz.type==='big'?3:2,0,Math.PI*2);X.fill();
   }
-  var fovRad=CAM_FOV/2*Math.PI/180;
+  var fovRad=CAM_FOV_H/2*Math.PI/180;
   X.strokeStyle='rgba(255,255,255,0.3)';X.lineWidth=1;
   X.beginPath();X.moveTo(radarX,radarY);X.lineTo(radarX+Math.sin(-fovRad)*radarR,radarY-Math.cos(-fovRad)*radarR);X.stroke();
   X.beginPath();X.moveTo(radarX,radarY);X.lineTo(radarX+Math.sin(fovRad)*radarR,radarY-Math.cos(fovRad)*radarR);X.stroke();
@@ -413,7 +413,7 @@ function drawAROverlay(){
     var az=zombies[ai];
     if(az.onScreen||az.dist>8) continue;
     var relA3=angleDiff(az.worldAngle,camYaw-yawOffset);
-    if(Math.abs(relA3)<CAM_FOV/2) continue;
+    if(Math.abs(relA3)<CAM_FOV_H/2) continue;
     var arrowX2=relA3>0?C.width-30:30;
     var urgency2=Math.min(1,(4-az.dist)/4);
     if(urgency2<0) continue;
