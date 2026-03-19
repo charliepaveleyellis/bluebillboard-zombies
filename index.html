@@ -1,0 +1,567 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>Blue Billboard - Zombie AR</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box;}
+body{font-family:'Courier New',monospace;overflow:hidden;background:#000;
+  touch-action:manipulation;-webkit-user-select:none;user-select:none;}
+#cam{position:fixed;top:0;left:0;width:100%;height:100%;object-fit:cover;z-index:0;}
+#cam.hidden{display:none;}
+.fallback{position:fixed;top:0;left:0;right:0;bottom:0;z-index:0;
+  background:linear-gradient(135deg,#0a0a1a 0%,#1a0a0a 50%,#0a0a1a 100%);}
+.fallback.hidden{display:none;}
+canvas{position:fixed;top:0;left:0;width:100%;height:100%;z-index:1;}
+
+.overlay{position:fixed;top:0;left:0;right:0;bottom:0;z-index:10;
+  display:flex;flex-direction:column;justify-content:center;align-items:center;
+  background:rgba(10,0,0,0.92);color:#fff;text-align:center;padding:24px;}
+.overlay.hidden{display:none;}
+.overlay .logo-img{width:180px;margin-bottom:20px;}
+.overlay h1{font-size:34px;text-transform:uppercase;letter-spacing:4px;margin-bottom:8px;color:#ff3333;
+  text-shadow:0 0 25px rgba(255,50,50,0.6);}
+.overlay h2{font-size:16px;font-weight:400;margin-bottom:20px;color:#d9d9d9;line-height:1.6;}
+.overlay .final-score{font-size:80px;font-weight:900;color:#ff3333;margin:10px 0;
+  text-shadow:0 0 40px rgba(255,50,50,0.5);}
+.overlay .final-label{font-size:16px;color:#d9d9d9;text-transform:uppercase;letter-spacing:3px;}
+.overlay .stats{font-size:15px;color:#ff6644;margin-top:6px;}
+.overlay .high{font-size:16px;color:#ffdd00;margin-top:6px;}
+.btn{display:inline-block;padding:16px 50px;font-size:18px;font-weight:700;
+  text-transform:uppercase;letter-spacing:2px;color:#fff;background:#660000;
+  border:2px solid #ff3333;border-radius:50px;cursor:pointer;margin-top:20px;
+  box-shadow:0 0 15px rgba(255,50,50,0.3);}
+.btn:active{background:#ff3333;box-shadow:0 0 25px rgba(255,50,50,0.6);}
+.powered-by{position:fixed;bottom:4px;left:0;right:0;text-align:center;
+  font-size:10px;color:rgba(255,50,50,0.15);letter-spacing:1px;
+  text-transform:uppercase;z-index:5;pointer-events:none;}
+</style>
+</head>
+<body>
+
+<video id="cam" autoplay playsinline muted></video>
+<div class="fallback hidden" id="fallback"></div>
+<canvas id="game"></canvas>
+
+<div class="overlay" id="startScreen">
+  <img src="logo.png" alt="Blue Billboard" class="logo-img">
+  <h1>Zombie AR</h1>
+  <h2>Zombies are coming through your camera!<br>Tap them before they reach you!<br>Survive as long as you can!</h2>
+  <button class="btn" id="startBtn">Survive!</button>
+</div>
+
+<div class="overlay hidden" id="endScreen">
+  <img src="logo.png" alt="Blue Billboard" class="logo-img">
+  <h1 id="endTitle">You Died!</h1>
+  <div class="final-label">Kills</div>
+  <div class="final-score" id="finalScore">0</div>
+  <div class="high" id="highDisp"></div>
+  <div class="stats" id="statsDisp"></div>
+  <button class="btn" id="restartBtn">Try Again!</button>
+</div>
+
+<div class="powered-by">Powered by Blue Billboard</div>
+
+<script>
+// ─── AUDIO ──────────────────────────────────────
+var audioCtx=null;
+function initAudio(){if(!audioCtx)try{audioCtx=new(window.AudioContext||window.webkitAudioContext)();}catch(e){}}
+function snd(f,t,d,v){if(!audioCtx)return;try{var o=audioCtx.createOscillator(),g=audioCtx.createGain();
+  o.type=t||'square';o.frequency.value=f;g.gain.value=v||0.06;
+  g.gain.exponentialRampToValueAtTime(0.001,audioCtx.currentTime+(d||0.1));
+  o.connect(g);g.connect(audioCtx.destination);o.start();o.stop(audioCtx.currentTime+(d||0.1));}catch(e){}}
+function playSweep(s,e,t,d,v){if(!audioCtx)return;try{var n=audioCtx.currentTime,o=audioCtx.createOscillator(),g=audioCtx.createGain();
+  o.type=t||'sawtooth';o.frequency.setValueAtTime(s,n);o.frequency.exponentialRampToValueAtTime(e,n+d);
+  g.gain.setValueAtTime(v||0.06,n);g.gain.exponentialRampToValueAtTime(0.001,n+d);
+  o.connect(g);g.connect(audioCtx.destination);o.start(n);o.stop(n+d);}catch(e){}}
+function sfxShoot(){snd(800,'square',0.06,0.08);snd(200,'sawtooth',0.08,0.05);}
+function sfxKill(){playSweep(600,100,'sawtooth',0.2,0.07);snd(150,'square',0.15,0.06);}
+function sfxHit(){playSweep(200,60,'sawtooth',0.3,0.1);snd(80,'square',0.2,0.08);}
+function sfxWave(){playSweep(300,900,'sine',0.3,0.05);setTimeout(function(){playSweep(400,1000,'sine',0.2,0.04);},150);}
+function sfxHeadshot(){snd(1200,'sine',0.05,0.08);snd(600,'square',0.1,0.06);setTimeout(function(){snd(1500,'sine',0.05,0.06);},60);}
+
+// ─── CAMERA ─────────────────────────────────────
+var cam=document.getElementById('cam');
+var fallback=document.getElementById('fallback');
+function initCamera(){
+  navigator.mediaDevices.getUserMedia({video:{facingMode:'environment'},audio:false})
+  .then(function(s){cam.srcObject=s;})
+  .catch(function(){cam.classList.add('hidden');fallback.classList.remove('hidden');});
+}
+
+// ─── CANVAS ─────────────────────────────────────
+var C=document.getElementById('game');
+var X=C.getContext('2d');
+function resize(){C.width=window.innerWidth;C.height=window.innerHeight;}
+window.addEventListener('resize',resize);resize();
+
+// ─── CONFIG ─────────────────────────────────────
+var MAX_HP=5;
+var ZOMBIE_SPEED_MIN=0.3;
+var ZOMBIE_SPEED_MAX=0.8;
+var SPAWN_INTERVAL_START=2000;
+var SPAWN_INTERVAL_MIN=400;
+
+// ─── STATE ──────────────────────────────────────
+var running=false,gameOver=false;
+var score=0,wave=1,kills=0,hp=MAX_HP;
+var highScore=parseInt(localStorage.getItem('bb_zombie_hi')||'0');
+var zombies=[];
+var particles=[];
+var frameCount=0;
+var lastSpawn=0;
+var spawnInterval=SPAWN_INTERVAL_START;
+var waveKills=0,waveTarget=5;
+var screenFlash=0,flashColor='';
+var damageFlash=0;
+
+var startScreen=document.getElementById('startScreen');
+var endScreen=document.getElementById('endScreen');
+
+// ─── ZOMBIE ─────────────────────────────────────
+function spawnZombie(){
+  // Spawn from random edge position, walking toward center
+  var side=Math.random();
+  var z={
+    x:0,y:0,
+    targetX:C.width/2+(Math.random()-0.5)*C.width*0.4,
+    targetY:C.height/2+(Math.random()-0.5)*C.height*0.3,
+    scale:0.1,
+    maxScale:0.7+Math.random()*0.6,
+    speed:(ZOMBIE_SPEED_MIN+Math.random()*(ZOMBIE_SPEED_MAX-ZOMBIE_SPEED_MIN))*(1+wave*0.08),
+    hp:1+Math.floor(wave/4),
+    maxHp:1+Math.floor(wave/4),
+    hit:false,hitTimer:0,
+    wobble:Math.random()*Math.PI*2,
+    wobbleSpeed:0.02+Math.random()*0.03,
+    type:Math.random()<0.15+wave*0.02?'big':'normal',
+    armPhase:Math.random()*Math.PI*2
+  };
+  if(z.type==='big'){z.maxScale*=1.4;z.hp+=2;z.maxHp=z.hp;z.speed*=0.7;}
+
+  // Spawn from edges
+  if(side<0.25){z.x=-80;z.y=Math.random()*C.height;}
+  else if(side<0.5){z.x=C.width+80;z.y=Math.random()*C.height;}
+  else if(side<0.75){z.x=Math.random()*C.width;z.y=-80;}
+  else{z.x=Math.random()*C.width;z.y=C.height+80;}
+
+  zombies.push(z);
+}
+
+// ─── DRAW ZOMBIE ────────────────────────────────
+function drawZombie(z){
+  var s=z.scale;
+  if(s<0.05) return;
+  var w=60*s,h=90*s;
+  var wobX=Math.sin(z.wobble)*5*s;
+  var wobY=Math.cos(z.wobble*0.7)*3*s;
+  var cx=z.x+wobX,cy=z.y+wobY;
+
+  X.save();
+  X.translate(cx,cy);
+
+  // Flash white when hit
+  if(z.hitTimer>0){
+    X.globalAlpha=0.5+Math.sin(z.hitTimer*2)*0.5;
+  }
+
+  // Shadow on ground
+  X.fillStyle='rgba(0,0,0,0.3)';
+  X.beginPath();X.ellipse(0,h*0.45,w*0.4,h*0.08,0,0,Math.PI*2);X.fill();
+
+  // Legs — shambling animation
+  var legAnim=Math.sin(frameCount*0.08+z.armPhase)*12*s;
+  X.strokeStyle=z.type==='big'?'#2a4a2a':'#3a5a3a';X.lineWidth=6*s;X.lineCap='round';
+  X.beginPath();X.moveTo(-8*s,h*0.2);X.lineTo(-8*s+legAnim,h*0.45);X.stroke();
+  X.beginPath();X.moveTo(8*s,h*0.2);X.lineTo(8*s-legAnim,h*0.45);X.stroke();
+  // Feet
+  X.fillStyle='#2a3a2a';
+  X.beginPath();X.ellipse(-8*s+legAnim,h*0.46,5*s,3*s,0,0,Math.PI*2);X.fill();
+  X.beginPath();X.ellipse(8*s-legAnim,h*0.46,5*s,3*s,0,0,Math.PI*2);X.fill();
+
+  // Body
+  var bodyGrad=X.createLinearGradient(0,-h*0.4,0,h*0.3);
+  if(z.type==='big'){
+    bodyGrad.addColorStop(0,'#1a3a1a');
+    bodyGrad.addColorStop(1,'#0a2a0a');
+  } else {
+    bodyGrad.addColorStop(0,'#3a6a3a');
+    bodyGrad.addColorStop(1,'#2a4a2a');
+  }
+  X.fillStyle=bodyGrad;
+  X.beginPath();
+  X.ellipse(0,0,w*0.4,h*0.35,0,0,Math.PI*2);
+  X.fill();
+
+  // Torn shirt
+  X.fillStyle=z.type==='big'?'rgba(80,40,40,0.6)':'rgba(100,80,60,0.5)';
+  X.beginPath();
+  X.ellipse(0,-h*0.05,w*0.35,h*0.2,0,0,Math.PI);
+  X.fill();
+
+  // Ribs/wounds
+  X.strokeStyle='rgba(150,30,30,0.5)';X.lineWidth=1.5*s;
+  X.beginPath();X.moveTo(-w*0.15,h*0.05);X.lineTo(w*0.15,h*0.05);X.stroke();
+  X.beginPath();X.moveTo(-w*0.12,h*0.1);X.lineTo(w*0.12,h*0.1);X.stroke();
+
+  // Arms — reaching forward
+  var armAnim=Math.sin(frameCount*0.06+z.armPhase)*15*s;
+  X.strokeStyle=z.type==='big'?'#1a3a1a':'#3a6a3a';X.lineWidth=5*s;X.lineCap='round';
+  // Left arm reaching
+  X.beginPath();X.moveTo(-w*0.35,-h*0.15);
+  X.quadraticCurveTo(-w*0.6+armAnim,-h*0.3-armAnim*0.5,-w*0.5+armAnim*0.5,-h*0.45);
+  X.stroke();
+  // Right arm reaching
+  X.beginPath();X.moveTo(w*0.35,-h*0.15);
+  X.quadraticCurveTo(w*0.6-armAnim,-h*0.3+armAnim*0.5,w*0.5-armAnim*0.5,-h*0.45);
+  X.stroke();
+  // Hands — clawed
+  X.fillStyle='#4a7a4a';
+  X.beginPath();X.arc(-w*0.5+armAnim*0.5,-h*0.45,4*s,0,Math.PI*2);X.fill();
+  X.beginPath();X.arc(w*0.5-armAnim*0.5,-h*0.45,4*s,0,Math.PI*2);X.fill();
+
+  // Head
+  var headR=w*0.35;
+  var headY=-h*0.35;
+  // Neck
+  X.fillStyle=z.type==='big'?'#1a3a1a':'#3a6a3a';
+  X.fillRect(-4*s,headY+headR*0.6,8*s,8*s);
+  // Head shape
+  X.fillStyle=z.type==='big'?'#2a4a2a':'#4a7a4a';
+  X.beginPath();X.arc(0,headY,headR,0,Math.PI*2);X.fill();
+
+  // Sunken cheeks
+  X.fillStyle='rgba(20,40,20,0.5)';
+  X.beginPath();X.ellipse(-headR*0.4,headY+headR*0.2,headR*0.2,headR*0.3,0,0,Math.PI*2);X.fill();
+  X.beginPath();X.ellipse(headR*0.4,headY+headR*0.2,headR*0.2,headR*0.3,0,0,Math.PI*2);X.fill();
+
+  // Eyes — glowing
+  var eyeGlow=0.6+Math.sin(frameCount*0.1+z.wobble)*0.3;
+  X.shadowColor='rgba(255,50,0,'+eyeGlow+')';X.shadowBlur=8*s;
+  X.fillStyle='rgba(255,50,0,'+eyeGlow+')';
+  X.beginPath();X.arc(-headR*0.3,headY-headR*0.1,3*s,0,Math.PI*2);X.fill();
+  X.beginPath();X.arc(headR*0.3,headY-headR*0.1,3*s,0,Math.PI*2);X.fill();
+  // Pupils
+  X.shadowBlur=0;X.shadowColor='transparent';
+  X.fillStyle='#330000';
+  X.beginPath();X.arc(-headR*0.3,headY-headR*0.1,1.5*s,0,Math.PI*2);X.fill();
+  X.beginPath();X.arc(headR*0.3,headY-headR*0.1,1.5*s,0,Math.PI*2);X.fill();
+
+  // Mouth — open, jagged teeth
+  X.fillStyle='#1a0a0a';
+  X.beginPath();
+  X.ellipse(0,headY+headR*0.5,headR*0.35,headR*0.2,0,0,Math.PI*2);
+  X.fill();
+  // Teeth
+  X.fillStyle='#cccc99';
+  var teeth=5;
+  for(var t=0;t<teeth;t++){
+    var tx=-headR*0.25+t*(headR*0.5/(teeth-1));
+    var th=(t%2===0)?headR*0.12:headR*0.08;
+    X.fillRect(tx-1.5*s,headY+headR*0.4,3*s,th);
+  }
+
+  // HP bar for tough zombies
+  if(z.maxHp>1){
+    var barW=w*0.8;
+    var barH=4*s;
+    var barY=-h*0.5-8*s;
+    X.fillStyle='rgba(0,0,0,0.5)';
+    X.fillRect(-barW/2,barY,barW,barH);
+    X.fillStyle=z.hp/z.maxHp>0.5?'#44ff44':'#ff4444';
+    X.fillRect(-barW/2,barY,barW*(z.hp/z.maxHp),barH);
+  }
+
+  X.globalAlpha=1;
+  X.restore();
+}
+
+// ─── PARTICLES ──────────────────────────────────
+function spawnParticles(x,y,color,count){
+  for(var i=0;i<count;i++){
+    var a=(i/count)*Math.PI*2+Math.random()*0.5;
+    particles.push({x:x,y:y,
+      vx:Math.cos(a)*(3+Math.random()*5),
+      vy:Math.sin(a)*(3+Math.random()*5)-2,
+      life:12+Math.random()*10,maxLife:22,
+      size:2+Math.random()*4,color:color});
+  }
+}
+
+function drawParticles(){
+  for(var i=particles.length-1;i>=0;i--){
+    var p=particles[i];
+    p.x+=p.vx;p.y+=p.vy;p.vy+=0.15;p.life--;
+    if(p.life<=0){particles.splice(i,1);continue;}
+    X.globalAlpha=p.life/p.maxLife;
+    X.fillStyle=p.color;
+    X.fillRect(p.x-p.size/2,p.y-p.size/2,p.size,p.size);
+  }
+  X.globalAlpha=1;
+}
+
+// ─── HUD ────────────────────────────────────────
+function drawHUD(){
+  // Top bar
+  X.fillStyle='rgba(0,0,0,0.6)';
+  X.fillRect(0,0,C.width,70);
+  X.fillStyle='rgba(255,50,50,0.3)';
+  X.fillRect(0,68,C.width,2);
+
+  // Score
+  X.fillStyle='#fff';
+  X.font='bold 32px Courier New';X.textAlign='center';
+  X.fillText(score,C.width/2,44);
+
+  // Wave
+  X.fillStyle='#ff6644';
+  X.font='bold 14px Courier New';X.textAlign='left';
+  X.fillText('WAVE '+wave,16,28);
+
+  // Kills
+  X.fillStyle='#ff3333';
+  X.font='12px Courier New';
+  X.fillText(kills+' KILLS',16,48);
+
+  // HP hearts
+  X.font='22px serif';X.textAlign='right';
+  var hearts='';
+  for(var i=0;i<MAX_HP;i++){
+    hearts+=(i<hp)?'\u2764':'\u2661';
+  }
+  X.fillStyle='#ff3333';
+  X.fillText(hearts,C.width-16,42);
+
+  // Wave progress bar
+  var progW=C.width-32;
+  var prog=Math.min(waveKills/waveTarget,1);
+  X.fillStyle='rgba(255,50,50,0.15)';
+  X.fillRect(16,58,progW,6);
+  X.fillStyle='rgba(255,100,50,0.6)';
+  X.fillRect(16,58,progW*prog,6);
+}
+
+// ─── AR OVERLAY ─────────────────────────────────
+function drawAROverlay(){
+  // Dark red tint over camera
+  X.globalAlpha=0.35;
+  X.fillStyle='#0a0008';
+  X.fillRect(0,0,C.width,C.height);
+  X.globalAlpha=1;
+
+  // Scan lines
+  X.strokeStyle='rgba(255,50,50,0.04)';X.lineWidth=1;
+  for(var y=0;y<C.height;y+=3){
+    X.beginPath();X.moveTo(0,y);X.lineTo(C.width,y);X.stroke();
+  }
+
+  // Vignette — dark edges
+  var vg=X.createRadialGradient(C.width/2,C.height/2,C.width*0.3,C.width/2,C.height/2,C.width*0.8);
+  vg.addColorStop(0,'rgba(0,0,0,0)');
+  vg.addColorStop(1,'rgba(0,0,0,0.5)');
+  X.fillStyle=vg;
+  X.fillRect(0,0,C.width,C.height);
+
+  // Crosshair
+  var cx=C.width/2,cy=C.height/2;
+  X.strokeStyle='rgba(255,50,50,0.25)';X.lineWidth=1;
+  X.beginPath();X.moveTo(cx-25,cy);X.lineTo(cx+25,cy);X.stroke();
+  X.beginPath();X.moveTo(cx,cy-25);X.lineTo(cx,cy+25);X.stroke();
+  X.beginPath();X.arc(cx,cy,18,0,Math.PI*2);X.stroke();
+}
+
+// ─── TAP HANDLER ────────────────────────────────
+function handleTap(e){
+  if(!running||gameOver) return;
+  e.preventDefault();
+  var touches=e.changedTouches?e.changedTouches:[e];
+  for(var t=0;t<touches.length;t++){
+    var tx=touches[t].clientX||touches[t].pageX;
+    var ty=touches[t].clientY||touches[t].pageY;
+
+    sfxShoot();
+    // Muzzle flash particle
+    spawnParticles(tx,ty,'#ffaa00',3);
+
+    var hit=false;
+    // Check zombies back to front (closest first)
+    for(var i=zombies.length-1;i>=0;i--){
+      var z=zombies[i];
+      var zw=60*z.scale,zh=90*z.scale;
+      var pad=15*z.scale;
+      if(tx>=z.x-zw/2-pad&&tx<=z.x+zw/2+pad&&
+         ty>=z.y-zh*0.5-pad&&ty<=z.y+zh*0.5+pad){
+        z.hp--;
+        z.hitTimer=8;
+        hit=true;
+
+        if(z.hp<=0){
+          // Kill
+          kills++;waveKills++;score+=z.type==='big'?25:10;
+          sfxKill();
+          spawnParticles(z.x,z.y,'#4a7a4a',12);
+          spawnParticles(z.x,z.y,'#ff3333',6);
+          zombies.splice(i,1);
+
+          // Check wave complete
+          if(waveKills>=waveTarget){
+            wave++;
+            waveKills=0;
+            waveTarget=Math.floor(5+wave*2.5);
+            spawnInterval=Math.max(SPAWN_INTERVAL_MIN,SPAWN_INTERVAL_START-wave*120);
+            sfxWave();
+            screenFlash=10;flashColor='rgba(100,255,100,';
+          }
+        } else {
+          sfxHeadshot();
+          spawnParticles(tx,ty,'#ff0000',4);
+        }
+        break;
+      }
+    }
+    if(!hit){
+      // Miss — show impact
+      spawnParticles(tx,ty,'rgba(150,150,150,0.5)',2);
+    }
+  }
+}
+
+C.addEventListener('touchstart',handleTap,{passive:false});
+C.addEventListener('click',handleTap);
+
+// ─── GAME LOOP ──────────────────────────────────
+function gameLoop(timestamp){
+  if(!running) return;
+  frameCount++;
+
+  X.clearRect(0,0,C.width,C.height);
+
+  // AR overlay
+  drawAROverlay();
+
+  if(!gameOver){
+    // Spawn zombies
+    if(timestamp-lastSpawn>spawnInterval){
+      spawnZombie();
+      // Sometimes spawn extras in later waves
+      if(wave>3&&Math.random()<0.3) spawnZombie();
+      if(wave>6&&Math.random()<0.2) spawnZombie();
+      lastSpawn=timestamp;
+    }
+
+    // Update zombies
+    for(var i=zombies.length-1;i>=0;i--){
+      var z=zombies[i];
+
+      // Move toward player (center-ish)
+      var dx=z.targetX-z.x,dy=z.targetY-z.y;
+      var dist=Math.sqrt(dx*dx+dy*dy);
+      if(dist>1){
+        z.x+=dx/dist*z.speed*(0.5+z.scale);
+        z.y+=dy/dist*z.speed*(0.5+z.scale);
+      }
+
+      // Scale up as they approach (getting closer)
+      z.scale=Math.min(z.maxScale,z.scale+0.002*z.speed);
+
+      // Wobble
+      z.wobble+=z.wobbleSpeed;
+
+      // Hit flash timer
+      if(z.hitTimer>0) z.hitTimer--;
+
+      // Reached the player?
+      if(z.scale>=z.maxScale*0.95&&dist<80){
+        hp--;
+        sfxHit();
+        damageFlash=12;
+        spawnParticles(z.x,z.y,'#ff0000',8);
+        zombies.splice(i,1);
+        if(navigator.vibrate) navigator.vibrate([100,50,150]);
+
+        if(hp<=0){
+          gameOver=true;
+          screenFlash=15;flashColor='rgba(255,0,0,';
+          setTimeout(endGame,1200);
+        }
+        continue;
+      }
+    }
+  }
+
+  // Sort zombies by scale (draw far ones first)
+  zombies.sort(function(a,b){return a.scale-b.scale;});
+
+  // Draw zombies
+  for(var i=0;i<zombies.length;i++){
+    drawZombie(zombies[i]);
+  }
+
+  drawParticles();
+
+  // Damage flash
+  if(damageFlash>0){
+    X.fillStyle='rgba(255,0,0,'+(damageFlash*0.04)+')';
+    X.fillRect(0,0,C.width,C.height);
+    damageFlash--;
+  }
+
+  // Screen flash (wave complete or death)
+  if(screenFlash>0){
+    X.fillStyle=flashColor+(screenFlash*0.03)+')';
+    X.fillRect(0,0,C.width,C.height);
+    screenFlash--;
+  }
+
+  if(!gameOver) drawHUD();
+
+  requestAnimationFrame(gameLoop);
+}
+
+// ─── START / END ────────────────────────────────
+function startGame(){
+  try{
+    initAudio();
+    if(audioCtx&&audioCtx.state==='suspended') audioCtx.resume();
+
+    score=0;kills=0;wave=1;hp=MAX_HP;
+    waveKills=0;waveTarget=5;
+    spawnInterval=SPAWN_INTERVAL_START;
+    zombies=[];particles=[];
+    frameCount=0;lastSpawn=0;
+    gameOver=false;screenFlash=0;damageFlash=0;
+
+    resize();
+    startScreen.classList.add('hidden');
+    endScreen.classList.add('hidden');
+    running=true;
+    requestAnimationFrame(gameLoop);
+  }catch(err){alert('Error: '+err.message);}
+}
+
+function endGame(){
+  running=false;
+  var fs=score;
+  if(fs>highScore){highScore=fs;localStorage.setItem('bb_zombie_hi',highScore.toString());}
+
+  document.getElementById('finalScore').textContent=kills;
+  document.getElementById('highDisp').textContent='BEST: '+highScore+' PTS';
+  document.getElementById('statsDisp').textContent='Wave '+wave+' | '+score+' points';
+  if(wave>5) document.getElementById('endTitle').textContent='VALIANT EFFORT!';
+  else document.getElementById('endTitle').textContent='YOU DIED!';
+  endScreen.classList.remove('hidden');
+}
+
+// ─── BUTTONS ────────────────────────────────────
+function bindBtn(id,fn){
+  var el=document.getElementById(id);
+  el.addEventListener('touchend',function(e){e.preventDefault();e.stopPropagation();fn();},{passive:false});
+  el.addEventListener('touchstart',function(e){e.stopPropagation();},{passive:false});
+  el.addEventListener('click',function(e){e.preventDefault();e.stopPropagation();fn();});
+}
+bindBtn('startBtn',function(){initCamera();startGame();});
+bindBtn('restartBtn',startGame);
+</script>
+</body>
+</html>
