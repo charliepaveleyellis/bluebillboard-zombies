@@ -109,12 +109,12 @@ function handleTap(e){
   }
 }
 
-// Listen on document
+// Listen on document — but NOT in AR mode
 document.addEventListener('touchstart',function(e){
-  if(!running||gameOver) return;
+  if(!running||gameOver||useWebXR) return;
   handleTap(e);
 },{passive:false});
 document.addEventListener('click',function(e){
-  if(!running||gameOver) return;
+  if(!running||gameOver||useWebXR) return;
   handleTap(e);
 });

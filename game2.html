@@ -833,13 +833,13 @@ function handleTap(e){
   }
 }
 
-// Listen on document
+// Listen on document — but NOT in AR mode
 document.addEventListener('touchstart',function(e){
-  if(!running||gameOver) return;
+  if(!running||gameOver||useWebXR) return;
   handleTap(e);
 },{passive:false});
 document.addEventListener('click',function(e){
-  if(!running||gameOver) return;
+  if(!running||gameOver||useWebXR) return;
   handleTap(e);
 });
 
@@ -1093,32 +1093,36 @@ async function startWebXR(){
   xrHitTestSource=await xrSession.requestHitTestSource({space:viewerRef});
   xrSession.addEventListener('select',function(){
     if(!running||gameOver) return;
-    var now=Date.now();if(now-lastShotTime<SHOT_COOLDOWN) return;lastShotTime=now;
-    sfxShoot();muzzleFlash=5;spawnParticles(C.width/2,C.height/2,'#ffaa00',3);
-    // Only hit zombies roughly in front of the camera (within 30 degrees)
-    var bestIdx=-1,bestDist=99999;
-    for(var i=0;i<zombies.length;i++){
-      var z=zombies[i];
-      if(!z.mesh) continue;
-      var dx=xrCamera.position.x-z.mesh.position.x;
-      var dz=xrCamera.position.z-z.mesh.position.z;
-      var zombieAngle=Math.atan2(dx,dz);
-      var camAngle=xrCamera.rotation.y;
-      var angleDiff2=Math.abs(zombieAngle-camAngle);
-      while(angleDiff2>Math.PI) angleDiff2=Math.abs(angleDiff2-Math.PI*2);
-      if(angleDiff2>0.25) continue; // ~15 degrees — must aim directly at it
-      if(z.dist<bestDist){bestDist=z.dist;bestIdx=i;}
+    sfxShoot();muzzleFlash=5;
+
+    // Raycast from camera center to find which 3D zombie was tapped
+    var raycaster=new THREE.Raycaster();
+    raycaster.setFromCamera(new THREE.Vector2(0,0),xrCamera);
+    var allMeshes=[];
+    for(var ri=0;ri<zombies.length;ri++){
+      if(zombies[ri].mesh) allMeshes.push(zombies[ri].mesh);
     }
-    if(bestIdx>=0){
-      var z=zombies[bestIdx];z.hp--;z.hitTimer=0.3;
-      screenShakeX+=(Math.random()-0.5)*6;screenShakeY+=(Math.random()-0.5)*4;
-      if(z.hp<=0){kills++;waveKills++;score+=z.isBig?25:10;combo++;comboTimer=2;sfxKill();
-        if(z.mesh)xrScene.remove(z.mesh);zombies.splice(bestIdx,1);
-        if(waveKills>=waveTarget){wave++;waveKills=0;waveTarget=Math.floor(5+wave*2.5);
-          spawnInterval=Math.max(SPAWN_INTERVAL_MIN,SPAWN_INTERVAL_START-wave*100);sfxWave();screenFlash=10;
-          if(hp<MAX_HP)hp++;}
-      } else {spawnParticles(C.width/2,C.height/2,'#ff0000',6);}
-    } else {spawnParticles(C.width/2,C.height/2,'rgba(150,150,150,0.4)',3);}
+    var intersects=raycaster.intersectObjects(allMeshes,true);
+
+    if(intersects.length>0){
+      // Find which zombie owns this mesh
+      var hitObj=intersects[0].object;
+      while(hitObj.parent&&hitObj.parent!==xrScene) hitObj=hitObj.parent;
+      var hitIdx=-1;
+      for(var fi=0;fi<zombies.length;fi++){
+        if(zombies[fi].mesh===hitObj){hitIdx=fi;break;}
+      }
+      if(hitIdx>=0){
+        var z=zombies[hitIdx];z.hp--;z.hitTimer=0.3;
+        if(z.hp<=0){
+          kills++;waveKills++;score+=z.isBig?25:10;combo++;comboTimer=2;sfxKill();
+          xrScene.remove(z.mesh);zombies.splice(hitIdx,1);
+          if(waveKills>=waveTarget){wave++;waveKills=0;waveTarget=Math.floor(5+wave*2.5);
+            spawnInterval=Math.max(SPAWN_INTERVAL_MIN,SPAWN_INTERVAL_START-wave*100);sfxWave();screenFlash=10;
+            if(hp<MAX_HP)hp++;}
+        }
+      }
+    }
   });
   xrSession.addEventListener('end',function(){xrSession=null;useWebXR=false;});
   useWebXR=true;xrRenderer.setAnimationLoop(xrFrame);
