@@ -3,7 +3,6 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-<script src="https://launchar.app/sdk/v1?key=WEpuJOfaF1vpvtwg7gggdjDdJAKUsbi&redirect=true"></script>
 <title>Blue Billboard - Zombie AR</title>
 <style>
 *{margin:0;padding:0;box-sizing:border-box;}
@@ -1412,33 +1411,24 @@ function xrFrame(time,frame){
   xrRenderer.render(xrScene,xrCamera);
 }
 
-// Show AR button on all mobile devices — WebXR on Android, Variant Launch on iOS
-var isMobileDevice=/Mobi|Android|iPhone|iPad/i.test(navigator.userAgent);
-if(isMobileDevice){
-  var arBtn=document.getElementById('arBtn');
-  if(arBtn) arBtn.style.display='inline-block';
-  // Preload Three.js
-  var s=document.createElement('script');s.src='https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.min.js';
-  document.head.appendChild(s);
-  // Check WebXR support (native on Android, Variant Launch provides it on iOS)
-  arBtn.textContent='Real AR Mode';
-  if(navigator.xr&&navigator.xr.isSessionSupported){
-    navigator.xr.isSessionSupported('immersive-ar').then(function(ok){
-      if(ok) arBtn.textContent='Real AR Mode';
-      else arBtn.textContent='Real AR Mode (loading...)';
-    }).catch(function(){arBtn.textContent='Real AR Mode';});
-  }
+// Show AR button only on devices that support WebXR (Android Chrome)
+if(navigator.xr&&navigator.xr.isSessionSupported){
+  navigator.xr.isSessionSupported('immersive-ar').then(function(ok){
+    if(ok){
+      var arBtn=document.getElementById('arBtn');
+      if(arBtn) arBtn.style.display='inline-block';
+      var s=document.createElement('script');s.src='https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.min.js';
+      document.head.appendChild(s);
+    }
+  }).catch(function(){});
 }
 
 document.getElementById('arBtn').onclick=function(e){
   if(e)e.preventDefault();initAudio();if(audioCtx&&audioCtx.state==='suspended')audioCtx.resume();
   var arBtn=document.getElementById('arBtn');
 
-  // Check if WebXR is available (Android Chrome, or Variant Launch on iOS)
   if(!navigator.xr||!navigator.xr.isSessionSupported){
-    arBtn.textContent='AR loading... tap again in a moment';
-    arBtn.style.borderColor='#ffaa00';
-    setTimeout(function(){arBtn.textContent='Real AR Mode';arBtn.style.borderColor='#33ff33';},3000);
+    arBtn.textContent='AR not supported';arBtn.style.borderColor='#ff0000';
     return;
   }
 
