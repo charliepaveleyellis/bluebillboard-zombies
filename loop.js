@@ -2,6 +2,7 @@
 var lastTime=0;
 function gameLoop(timestamp){
   if(!running) return;
+  if(useWebXR) return; // AR mode uses xrFrame instead
   var dt=Math.min(0.05,(timestamp-lastTime)/1000);
   lastTime=timestamp;frameCount++;
 
