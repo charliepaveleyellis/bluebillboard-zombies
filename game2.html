@@ -1273,7 +1273,29 @@ function createXRZombie(isBig){
   var shadowMat2=new THREE.MeshBasicMaterial({color:0x000000,transparent:true,opacity:0.5});
   var shadow=new THREE.Mesh(shadowGeo,shadowMat2);shadow.position.y=0.01;g.add(shadow);
 
-  g.userData={aL:aLPivot,aR:aRPivot,fL:fLPivot,fR:fRPivot,lL:lLPivot,lR:lRPivot,sLeg:sLPivot,sReg:sRPivot,head:head,jaw:jaw,eyeLight:eyeLight,sc:sc};
+  // ── HEALTH BAR (above head, always faces camera) ──
+  var hpBarGroup=new THREE.Group();
+  hpBarGroup.position.set(0,1.45*sc,0);
+  // Background (dark)
+  var hpBgGeo=new THREE.PlaneGeometry(0.3*sc,0.04*sc);
+  var hpBgMat=new THREE.MeshBasicMaterial({color:0x000000,transparent:true,opacity:0.7,side:THREE.DoubleSide});
+  var hpBg=new THREE.Mesh(hpBgGeo,hpBgMat);
+  hpBarGroup.add(hpBg);
+  // Fill (green, will be scaled by HP)
+  var hpFillGeo=new THREE.PlaneGeometry(0.28*sc,0.03*sc);
+  var hpFillMat=new THREE.MeshBasicMaterial({color:0x44ff44,side:THREE.DoubleSide});
+  var hpFill=new THREE.Mesh(hpFillGeo,hpFillMat);
+  hpFill.position.z=0.001; // slightly in front
+  hpBarGroup.add(hpFill);
+  // Border
+  var hpBorderGeo=new THREE.PlaneGeometry(0.32*sc,0.05*sc);
+  var hpBorderMat=new THREE.MeshBasicMaterial({color:0x333333,transparent:true,opacity:0.5,side:THREE.DoubleSide});
+  var hpBorder=new THREE.Mesh(hpBorderGeo,hpBorderMat);
+  hpBorder.position.z=-0.001;
+  hpBarGroup.add(hpBorder);
+  g.add(hpBarGroup);
+
+  g.userData={aL:aLPivot,aR:aRPivot,fL:fLPivot,fR:fRPivot,lL:lLPivot,lR:lRPivot,sLeg:sLPivot,sReg:sRPivot,head:head,jaw:jaw,eyeLight:eyeLight,sc:sc,hpBar:hpBarGroup,hpFill:hpFill,hpFillMat:hpFillMat,hpBarWidth:0.28*sc};
   return g;
 }
 
@@ -1316,6 +1338,16 @@ function xrFrame(time,frame){
       if(ud.jaw){ud.jaw.rotation.x=Math.sin(z.wobble*3)*0.1;}
       if(ud.eyeLight){ud.eyeLight.intensity=(0.4+Math.sin(z.wobble*6)*0.3)*ud.sc;}
       if(z.hitTimer>0){z.hitTimer-=dt;m.visible=Math.sin(z.hitTimer*20)>0;}else{m.visible=true;}
+      // Health bar: face camera and update fill
+      if(ud.hpBar){
+        ud.hpBar.lookAt(xrCamera.position);
+        var hpPct=z.hp/z.maxHp;
+        ud.hpFill.scale.x=Math.max(0.01,hpPct);
+        ud.hpFill.position.x=-(1-hpPct)*ud.hpBarWidth/2;
+        if(hpPct>0.6) ud.hpFillMat.color.setHex(0x44ff44);
+        else if(hpPct>0.3) ud.hpFillMat.color.setHex(0xffaa00);
+        else ud.hpFillMat.color.setHex(0xff3333);
+      }
       z.worldAngle=Math.atan2(dx,dz)*180/Math.PI+camYaw-yawOffset;
       z.x=C.width/2;z.y=C.height*0.8;z.onScreen=dist<15;
       if(dist<0.7){hp--;sfxHit();damageFlash=12;xrScene.remove(m);zombies.splice(i,1);
