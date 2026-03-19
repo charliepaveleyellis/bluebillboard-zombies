@@ -407,26 +407,40 @@ function drawAROverlay(){
 }
 
 // ─── TAP HANDLER ────────────────────────────────
+var lastTapX=0,lastTapY=0,tapFired=false;
+
 function handleTap(e){
   if(!running||gameOver) return;
-  e.preventDefault();
-  var touches=e.changedTouches?e.changedTouches:[e];
-  for(var t=0;t<touches.length;t++){
-    var tx=touches[t].clientX||touches[t].pageX;
-    var ty=touches[t].clientY||touches[t].pageY;
-    sfxShoot();spawnParticles(tx,ty,'#ffaa00',3);
-    var hit=false;
-    // Check closest first
-    for(var i=zombies.length-1;i>=0;i--){
-      var z=zombies[i];
-      if(!z.onScreen) continue;
-      var zh=getZombieHeight(z.dist);
-      var zw=zh*0.35;
-      // Big generous hitbox — minimum 50px wide, 60px tall, plus padding
-      var hitW=Math.max(50,zw)+40;
-      var hitH=Math.max(60,zh)+40;
-      var zcx=z.x,zcy=z.y-zh/2;
-      if(tx>=zcx-hitW/2&&tx<=zcx+hitW/2&&ty>=zcy-hitH/2&&ty<=zcy+hitH/2){
+  if(e&&e.preventDefault) e.preventDefault();
+
+  var tx,ty;
+  if(e.changedTouches&&e.changedTouches.length>0){
+    tx=e.changedTouches[0].clientX;
+    ty=e.changedTouches[0].clientY;
+  } else if(e.touches&&e.touches.length>0){
+    tx=e.touches[0].clientX;
+    ty=e.touches[0].clientY;
+  } else {
+    tx=e.clientX;
+    ty=e.clientY;
+  }
+  if(tx===undefined||ty===undefined) return;
+
+  lastTapX=tx;lastTapY=ty;tapFired=true;
+  sfxShoot();spawnParticles(tx,ty,'#ffaa00',3);
+
+  var hit=false;
+  // Check closest first
+  for(var i=zombies.length-1;i>=0;i--){
+    var z=zombies[i];
+    if(!z.onScreen) continue;
+    var zh=getZombieHeight(z.dist);
+    var zw=zh*0.35;
+    // Big generous hitbox — minimum 60px wide, 80px tall, plus padding
+    var hitW=Math.max(60,zw)+50;
+    var hitH=Math.max(80,zh)+50;
+    var zcx=z.x,zcy=z.y-zh/2;
+    if(tx>=zcx-hitW/2&&tx<=zcx+hitW/2&&ty>=zcy-hitH/2&&ty<=zcy+hitH/2){
         z.hp--;z.hitTimer=0.3;hit=true;
         if(z.hp<=0){
           kills++;waveKills++;score+=z.isBig?25:10;
@@ -519,7 +533,29 @@ function gameLoop(timestamp){
     X.fillRect(0,0,C.width,C.height);screenFlash--;
   }
 
-  if(!gameOver) drawHUD();
+  if(!gameOver){
+    drawHUD();
+
+    // DEBUG: show hitboxes around zombies and last tap point
+    for(var di=0;di<zombies.length;di++){
+      var dz=zombies[di];
+      if(!dz.onScreen) continue;
+      var dzh=getZombieHeight(dz.dist);
+      var dzw=dzh*0.35;
+      var dhW=Math.max(60,dzw)+50;
+      var dhH=Math.max(80,dzh)+50;
+      var dcx=dz.x,dcy=dz.y-dzh/2;
+      X.strokeStyle='rgba(0,255,0,0.4)';X.lineWidth=1;
+      X.strokeRect(dcx-dhW/2,dcy-dhH/2,dhW,dhH);
+    }
+    // Show last tap
+    if(tapFired){
+      X.fillStyle='rgba(255,255,0,0.6)';
+      X.beginPath();X.arc(lastTapX,lastTapY,8,0,Math.PI*2);X.fill();
+      X.strokeStyle='#ffff00';X.lineWidth=2;
+      X.beginPath();X.arc(lastTapX,lastTapY,15,0,Math.PI*2);X.stroke();
+    }
+  }
   requestAnimationFrame(gameLoop);
 }
 
