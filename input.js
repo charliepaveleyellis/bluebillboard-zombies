@@ -98,9 +98,27 @@ function handleTap(e){
         waveTarget=Math.floor(5+wave*2.5);
         spawnInterval=Math.max(SPAWN_INTERVAL_MIN,SPAWN_INTERVAL_START-wave*100);
         sfxWave();screenFlash=15;
-        // Big screen shake for wave complete
+        // Heal 1 heart on wave clear
+        if(hp<MAX_HP){
+          hp++;
+          spawnParticles(C.width/2,C.height*0.04,'#ff3333',12);
+          spawnParticles(C.width/2,C.height*0.04,'#ff8888',8);
+        }
         screenShakeX+=(Math.random()-0.5)*20;
         screenShakeY+=(Math.random()-0.5)*15;
+      }
+
+      // Bonus heart at 5 combo
+      if(combo===5&&hp<MAX_HP){
+        hp++;
+        spawnParticles(C.width*0.8,30,'#ff3333',10);
+        snd(1000,'sine',0.1,0.06);
+      }
+      // Bonus heart at 10 combo
+      if(combo===10&&hp<MAX_HP){
+        hp++;
+        spawnParticles(C.width*0.8,30,'#ffaa00',12);
+        snd(1200,'sine',0.1,0.07);
       }
     } else {
       // Hit but alive — blood spray
