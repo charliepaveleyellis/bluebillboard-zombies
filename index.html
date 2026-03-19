@@ -143,11 +143,14 @@ var screenFlash=0,damageFlash=0;
 
 // ─── PERSPECTIVE ────────────────────────────────
 function getZombieFeetY(dist){
+  // All feet in the bottom portion of screen where the real floor is
+  // Far (dist=12): 75% down. Close (dist=1): 97% down.
   var t=Math.min(1,1.5/dist);
-  return C.height*(0.55+t*0.43);
+  return C.height*(0.75+t*0.22);
 }
 function getZombieHeight(dist){
-  return C.height*Math.min(0.55,0.6/dist);
+  // Shorter overall so they fit in the floor area of the camera
+  return C.height*Math.min(0.4,0.35/dist);
 }
 
 // ─── ZOMBIE ─────────────────────────────────────
