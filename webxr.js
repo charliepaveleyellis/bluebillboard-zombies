@@ -173,7 +173,9 @@ function xrFrame(time,frame){
 
       if(z.hitTimer>0){z.hitTimer-=dt;m.visible=Math.sin(z.hitTimer*20)>0;}else{m.visible=true;}
 
-      z.worldAngle=Math.atan2(dx,dz)*180/Math.PI;
+      // Set worldAngle relative to device yaw so radar works
+      var zombieWorldAngle=Math.atan2(dx,dz)*180/Math.PI;
+      z.worldAngle=zombieWorldAngle+camYaw-yawOffset;
       z.x=C.width/2;z.y=C.height*0.8;z.onScreen=dist<15;
 
       if(dist<0.7){
