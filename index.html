@@ -1209,26 +1209,38 @@ function createXRZombie(isBig){
   var handMat=new THREE.MeshLambertMaterial({color:new THREE.Color(skinR*0.8,skinG*0.9,skinB*0.7)});
   var clawMat=new THREE.MeshBasicMaterial({color:0x2a2015});
 
-  // Left arm chain — connected at joints
+  // Left arm — use pivot groups so rotation happens at joint, not center
+  // Upper arm pivot at shoulder
+  var aLPivot=new THREE.Group();
+  aLPivot.position.set(-0.24*sc,0.88*sc,0.12*sc);g.add(aLPivot);
   var aL=new THREE.Mesh(new THREE.CylinderGeometry(0.04*sc,0.035*sc,0.35*sc,6),armMat);
-  aL.position.set(-0.24*sc,0.88*sc,0.12*sc);aL.rotation.x=-0.9;aL.rotation.z=0.25;g.add(aL);
+  aL.position.set(0,-0.175*sc,0); // hang down from pivot
+  aLPivot.add(aL);aLPivot.rotation.x=-0.9;aLPivot.rotation.z=0.25;
+  // Forearm pivot at elbow (bottom of upper arm)
+  var fLPivot=new THREE.Group();
+  fLPivot.position.set(0,-0.35*sc,0);aLPivot.add(fLPivot); // at end of upper arm
   var fL=new THREE.Mesh(new THREE.CylinderGeometry(0.035*sc,0.03*sc,0.3*sc,6),darkMat);
-  fL.position.set(0,-0.175*sc,0);fL.rotation.x=-0.4;aL.add(fL); // at bottom of upper arm
+  fL.position.set(0,-0.15*sc,0);fLPivot.add(fL);fLPivot.rotation.x=-0.4;
+  // Hand at end of forearm
   var hL=new THREE.Mesh(new THREE.SphereGeometry(0.035*sc,6,6),handMat);
-  hL.position.set(0,-0.15*sc,0);fL.add(hL); // at bottom of forearm
+  hL.position.set(0,-0.3*sc,0);fLPivot.add(hL);
   for(var ci=0;ci<3;ci++){
     var ca=(ci-1)*0.4;
     var clL=new THREE.Mesh(new THREE.CylinderGeometry(0.008*sc,0.004*sc,0.06*sc,4),clawMat);
     clL.position.set(Math.sin(ca)*0.02*sc,-0.04*sc,Math.cos(ca)*0.01*sc);clL.rotation.x=-0.3;hL.add(clL);
   }
 
-  // Right arm chain — connected at joints
+  // Right arm — same pivot structure
+  var aRPivot=new THREE.Group();
+  aRPivot.position.set(0.24*sc,0.88*sc,0.12*sc);g.add(aRPivot);
   var aR=new THREE.Mesh(new THREE.CylinderGeometry(0.04*sc,0.035*sc,0.35*sc,6),armMat);
-  aR.position.set(0.24*sc,0.88*sc,0.12*sc);aR.rotation.x=-0.9;aR.rotation.z=-0.25;g.add(aR);
+  aR.position.set(0,-0.175*sc,0);aRPivot.add(aR);aRPivot.rotation.x=-0.9;aRPivot.rotation.z=-0.25;
+  var fRPivot=new THREE.Group();
+  fRPivot.position.set(0,-0.35*sc,0);aRPivot.add(fRPivot);
   var fR=new THREE.Mesh(new THREE.CylinderGeometry(0.035*sc,0.03*sc,0.3*sc,6),darkMat);
-  fR.position.set(0,-0.175*sc,0);fR.rotation.x=-0.4;aR.add(fR);
+  fR.position.set(0,-0.15*sc,0);fRPivot.add(fR);fRPivot.rotation.x=-0.4;
   var hR=new THREE.Mesh(new THREE.SphereGeometry(0.035*sc,6,6),handMat);
-  hR.position.set(0,-0.15*sc,0);fR.add(hR);
+  hR.position.set(0,-0.3*sc,0);fRPivot.add(hR);
   for(var ci=0;ci<3;ci++){
     var ca=(ci-1)*0.4;
     var clR=new THREE.Mesh(new THREE.CylinderGeometry(0.008*sc,0.004*sc,0.06*sc,4),clawMat);
@@ -1238,27 +1250,37 @@ function createXRZombie(isBig){
   // ── LEGS — hierarchical: thigh > shin > foot ──
   var legMat=new THREE.MeshLambertMaterial({color:darkCol});
   var footMat=new THREE.MeshLambertMaterial({color:0x1a1815});
-  // Left leg chain — connected at joints
+  // Left leg — pivot at hip
+  var lLPivot=new THREE.Group();
+  lLPivot.position.set(-0.09*sc,0.5*sc,0);g.add(lLPivot);
   var lL=new THREE.Mesh(new THREE.CylinderGeometry(0.07*sc,0.055*sc,0.4*sc,6),legMat);
-  lL.position.set(-0.09*sc,0.3*sc,0);g.add(lL);
+  lL.position.set(0,-0.2*sc,0);lLPivot.add(lL);
+  // Knee pivot at bottom of thigh
+  var sLPivot=new THREE.Group();
+  sLPivot.position.set(0,-0.4*sc,0);lLPivot.add(sLPivot);
   var sLeg=new THREE.Mesh(new THREE.CylinderGeometry(0.05*sc,0.04*sc,0.35*sc,6),darkMat);
-  sLeg.position.set(0,-0.2*sc,0);lL.add(sLeg); // at bottom of thigh
+  sLeg.position.set(0,-0.175*sc,0);sLPivot.add(sLeg);
   var ftL=new THREE.Mesh(new THREE.BoxGeometry(0.07*sc,0.03*sc,0.12*sc),footMat);
-  ftL.position.set(0,-0.175*sc,0.03*sc);sLeg.add(ftL); // at bottom of shin
-  // Right leg chain
+  ftL.position.set(0,-0.35*sc,0.03*sc);sLPivot.add(ftL);
+
+  // Right leg
+  var lRPivot=new THREE.Group();
+  lRPivot.position.set(0.09*sc,0.5*sc,0);g.add(lRPivot);
   var lR=new THREE.Mesh(new THREE.CylinderGeometry(0.07*sc,0.055*sc,0.4*sc,6),legMat);
-  lR.position.set(0.09*sc,0.3*sc,0);g.add(lR);
+  lR.position.set(0,-0.2*sc,0);lRPivot.add(lR);
+  var sRPivot=new THREE.Group();
+  sRPivot.position.set(0,-0.4*sc,0);lRPivot.add(sRPivot);
   var sReg=new THREE.Mesh(new THREE.CylinderGeometry(0.05*sc,0.04*sc,0.35*sc,6),darkMat);
-  sReg.position.set(0,-0.2*sc,0);lR.add(sReg);
+  sReg.position.set(0,-0.175*sc,0);sRPivot.add(sReg);
   var ftR=new THREE.Mesh(new THREE.BoxGeometry(0.07*sc,0.03*sc,0.12*sc),footMat);
-  ftR.position.set(0,-0.175*sc,0.03*sc);sReg.add(ftR);
+  ftR.position.set(0,-0.35*sc,0.03*sc);sRPivot.add(ftR);
 
   // ── GROUND SHADOW ──
   var shadowGeo=new THREE.CircleGeometry(0.3*sc,16);shadowGeo.rotateX(-Math.PI/2);
   var shadowMat2=new THREE.MeshBasicMaterial({color:0x000000,transparent:true,opacity:0.5});
   var shadow=new THREE.Mesh(shadowGeo,shadowMat2);shadow.position.y=0.01;g.add(shadow);
 
-  g.userData={aL:aL,aR:aR,fL:fL,fR:fR,lL:lL,lR:lR,sLeg:sLeg,sReg:sReg,head:head,jaw:jaw,eyeLight:eyeLight,sc:sc};
+  g.userData={aL:aLPivot,aR:aRPivot,fL:fLPivot,fR:fRPivot,lL:lLPivot,lR:lRPivot,sLeg:sLPivot,sReg:sRPivot,head:head,jaw:jaw,eyeLight:eyeLight,sc:sc};
   return g;
 }
 
