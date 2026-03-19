@@ -464,11 +464,12 @@ function handleTap(e){
     spawnParticles(tx,ty,'rgba(150,150,150,0.5)',2);
   }
 }
-C.addEventListener('touchstart',function(e){
-  if(!running||gameOver) return; // don't block buttons when not playing
+// Listen on document so touches always register regardless of z-index
+document.addEventListener('touchstart',function(e){
+  if(!running||gameOver) return;
   handleTap(e);
 },{passive:false});
-C.addEventListener('click',function(e){
+document.addEventListener('click',function(e){
   if(!running||gameOver) return;
   handleTap(e);
 });
