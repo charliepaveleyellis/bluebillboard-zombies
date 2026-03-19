@@ -18,6 +18,10 @@ function drawZombie(z){
   var big=z.isBig;
   var type=z.type||'normal';
 
+  // DEBUG: bright border to confirm new draw.js is running
+  X.strokeStyle='#ff00ff';X.lineWidth=3;
+  X.strokeRect(z.x-w/2,z.y-h,w,h);
+
   var feetY=z.y;
   var wobX=Math.sin(z.wobble)*4*s*5;
   var stepBounce=Math.abs(Math.sin(z.wobble*2))*3*s*4;
