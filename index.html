@@ -93,7 +93,7 @@ function initCamera(){
 
 // ─── DEVICE ORIENTATION (smoothed) ──────────────
 var camYaw=0;        // smoothed yaw (compass heading)
-var camPitch=0;      // smoothed pitch (degrees below horizontal that camera points)
+var camPitch=10;     // smoothed pitch (degrees below horizontal) — default 10 so floor is visible
 var rawYaw=0;
 var rawPitch=0;
 var yawOffset=0;
@@ -523,7 +523,7 @@ function gameLoop(timestamp){
       var feetSY=angleToScreenY(feetAng);
       var headSY=angleToScreenY(0);
 
-      if(Math.abs(sx)>1.4||feetSY<-50||headSY>C.height+50){
+      if(Math.abs(sx)>1.4){
         z.onScreen=false;
       } else {
         z.onScreen=Math.abs(sx)<=1.1;
@@ -585,7 +585,8 @@ function startGame(){
     gameOver=false;screenFlash=0;damageFlash=0;
 
     // Calibrate: wherever you're pointing now = forward
-    yawOffset=camYaw;
+    yawOffset=rawYaw;
+    camYaw=rawYaw;
 
     resize();
     startScreen.classList.add('hidden');
