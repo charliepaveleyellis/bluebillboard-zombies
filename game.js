@@ -104,7 +104,7 @@ function spawnZombie(){
 
   var z={
     worldAngle:Math.random()*360,
-    dist:4+Math.random()*4,
+    dist:7+Math.random()*5,
     speed:0.5+Math.random()*0.4,
     hp:1+Math.floor(wave/4),
     maxHp:1+Math.floor(wave/4),
