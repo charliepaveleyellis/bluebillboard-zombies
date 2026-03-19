@@ -89,7 +89,7 @@ function getZombieFeetY(dist){
   return C.height*(0.72+t*0.25);
 }
 function getZombieHeight(dist){
-  return C.height*Math.min(0.5,0.45/dist);
+  return C.height*Math.min(0.6,0.7/dist);
 }
 
 // ─── ZOMBIE ─────────────────────────────────────

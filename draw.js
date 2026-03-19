@@ -12,7 +12,7 @@ function zombieSkin(z,light){
 function drawZombie(z){
   if(!z.onScreen) return;
   var h=getZombieHeight(z.dist);
-  var w=h*0.4;
+  var w=h*0.5;
   if(h<6) return;
   var s=h/C.height;
   var big=z.isBig;
