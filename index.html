@@ -169,6 +169,28 @@ function createReticle() {
 }
 createReticle();
 
+// ─── FLOOR GRID (shows where the floor plane is) ──
+const floorGrid = new THREE.Group();
+const gridMat = new THREE.MeshBasicMaterial({ color: 0xff3333, transparent: true, opacity: 0.08, side: THREE.DoubleSide });
+// Large circle on the floor
+const floorCircleGeo = new THREE.RingGeometry(0.5, 8, 64);
+floorCircleGeo.rotateX(-Math.PI / 2);
+const floorCircle = new THREE.Mesh(floorCircleGeo, gridMat);
+floorGrid.add(floorCircle);
+// Grid lines
+for (let i = -4; i <= 4; i++) {
+  const lineGeo = new THREE.PlaneGeometry(0.02, 8);
+  lineGeo.rotateX(-Math.PI / 2);
+  const lineH = new THREE.Mesh(lineGeo, gridMat);
+  lineH.position.z = i;
+  floorGrid.add(lineH);
+  const lineV = new THREE.Mesh(lineGeo.clone(), gridMat);
+  lineV.rotation.y = Math.PI / 2;
+  lineV.position.x = i;
+  floorGrid.add(lineV);
+}
+scene.add(floorGrid);
+
 // ─── ZOMBIE MODEL ──────────────────────────────
 function createZombieMesh(isBig) {
   const group = new THREE.Group();
@@ -563,35 +585,36 @@ function onXRFrame(time, frame) {
   const dt = Math.min(0.05, (time - prevTime) / 1000);
   prevTime = time;
 
-  // Hit test to find the floor
-  if (hitTestSource && !floorDetected) {
+  // Estimate floor from camera height as fallback (assume phone held at ~1.5m)
+  if (floorY === null) {
+    floorY = camera.position.y - 1.5;
+    floorDetected = true;
+  }
+
+  // Hit test to find the real floor — overrides estimate
+  if (hitTestSource) {
     const hits = frame.getHitTestResults(hitTestSource);
     if (hits.length > 0) {
       const pose = hits[0].getPose(localRefSpace);
       if (pose) {
-        reticle.visible = true;
-        reticle.matrix.fromArray(pose.transform.matrix);
-        floorY = pose.transform.position.y;
-
-        // Auto-detect floor after a moment of stable tracking
-        if (!floorDetected) {
-          floorDetected = true;
-          reticle.visible = false;
-        }
+        // Smoothly update floor Y from hit test
+        const hitY = pose.transform.position.y;
+        floorY = floorY * 0.9 + hitY * 0.1;
+        floorDetected = true;
       }
     }
   }
 
-  // Keep updating floor position
-  if (hitTestSource && floorDetected) {
-    const hits = frame.getHitTestResults(hitTestSource);
-    if (hits.length > 0) {
-      const pose = hits[0].getPose(localRefSpace);
-      if (pose) floorY = pose.transform.position.y;
-    }
+  // Also keep fallback updating if hit-test isn't finding surfaces
+  if (!hitTestSource || !floorDetected) {
+    floorY = camera.position.y - 1.5;
+    floorDetected = true;
   }
 
-  if (running && !gameOver && floorDetected) {
+  // Update floor grid to follow camera at floor level
+  floorGrid.position.set(camera.position.x, floorY + 0.005, camera.position.z);
+
+  if (running && !gameOver) {
     // Spawn zombies
     if (time - lastSpawn > spawnInterval) {
       spawnZombie();
