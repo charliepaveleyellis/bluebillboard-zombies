@@ -35,11 +35,15 @@ function handleTap(e){
     var z=zombies[bestIdx];
     z.hp--;z.hitTimer=0.3;
     if(z.hp<=0){
+      // Kill — remove immediately
       kills++;waveKills++;score+=z.isBig?25:10;
       sfxKill();
       var zh2=getZombieHeight(z.dist);
-      spawnParticles(z.x,z.y-zh2/2,'#4a7a4a',12);
-      spawnParticles(z.x,z.y-zh2/2,'#ff3333',6);
+      spawnParticles(z.x,z.y-zh2/2,'#4a7a4a',15);
+      spawnParticles(z.x,z.y-zh2/2,'#ff3333',10);
+      spawnParticles(z.x,z.y-zh2/2,'#ffaa00',5);
+      // Remove from AR scene if in WebXR
+      if(z.mesh&&typeof xrScene!=='undefined') try{xrScene.remove(z.mesh);}catch(e){}
       zombies.splice(bestIdx,1);
       if(waveKills>=waveTarget){
         wave++;waveKills=0;
@@ -48,7 +52,8 @@ function handleTap(e){
         sfxWave();screenFlash=10;
       }
     } else {
-      spawnParticles(tx,ty,'#ff0000',4);
+      // Hit but not dead — show damage
+      spawnParticles(tx,ty,'#ff0000',6);
     }
   } else {
     spawnParticles(tx,ty,'rgba(150,150,150,0.5)',2);
