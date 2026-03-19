@@ -128,21 +128,17 @@ function updateOrientation(){
   camPitch+=(rawPitch-camPitch)*0.15;
 }
 
-// Simple perspective: far = top of screen (small), close = bottom (big)
-// This matches how the floor looks through the camera when you hold the phone
+// Simple perspective: far = higher on screen (small), close = lower (big)
+// Hold your phone pointing at the floor/forward — top of screen = far, bottom = close
 function getZombieFeetY(dist){
-  // dist ranges from ~12 (far) to ~1 (close)
-  // Map to screen: far = 35% from top, close = 95% from top
-  var t=1.0/dist;  // bigger when closer
-  var norm=Math.min(1,(t-0.08)/0.92);  // normalize 0-1
-  norm=norm*norm;  // quadratic for perspective feel
-  return C.height*(0.35+norm*0.60);
+  // dist 12 = far (feet at 55% screen), dist 1 = close (feet at 98%)
+  var t=Math.min(1,1.5/dist);
+  return C.height*(0.55+t*0.43);
 }
 
 function getZombieHeight(dist){
-  // Height based on distance — close = tall (human sized), far = small
-  // At dist=1 zombie is ~45% of screen height, at dist=12 it's tiny
-  return C.height*Math.min(0.5,0.55/dist);
+  // Close = fills half the screen, far = tiny
+  return C.height*Math.min(0.55,0.6/dist);
 }
 
 function angleDiff(a,b){
@@ -227,10 +223,13 @@ function drawZombie(z){
     X.globalAlpha=distAlpha*(0.5+Math.sin(z.hitTimer*2)*0.5);
   }
 
-  // Shadow on ground
-  var shadowAlpha=Math.min(0.4,0.1+s*0.3);
+  // Strong ground shadow — connects zombie to the floor
+  var shadowAlpha=Math.min(0.6,0.2+h/C.height);
   X.fillStyle='rgba(0,0,0,'+shadowAlpha+')';
-  X.beginPath();X.ellipse(0,h*0.45,w*0.5,h*0.06+s*4,0,0,Math.PI*2);X.fill();
+  X.beginPath();X.ellipse(0,h*0.5,w*0.7,h*0.04+4,0,0,Math.PI*2);X.fill();
+  // Softer outer shadow
+  X.fillStyle='rgba(0,0,0,'+shadowAlpha*0.3+')';
+  X.beginPath();X.ellipse(0,h*0.5,w*1.0,h*0.06+6,0,0,Math.PI*2);X.fill();
 
   // Legs
   var legAnim=Math.sin(frameCount*0.08+z.armPhase)*14*s;
