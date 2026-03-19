@@ -206,6 +206,19 @@ function zombieSkin(z,light){
 
 // ─── DRAW ZOMBIE ────────────────────────────────
 function drawZombie(z){
+  // TEST: draw simple bright shape to prove this function runs
+  if(!z.onScreen) return;
+  var th=getZombieHeight(z.dist);
+  if(th<6) return;
+  var tw=th*0.4;
+  X.fillStyle='#ff0000';
+  X.fillRect(z.x-tw/2,z.y-th,tw,th);
+  X.fillStyle='#ffff00';
+  X.beginPath();X.arc(z.x,z.y-th*0.8,tw*0.3,0,Math.PI*2);X.fill();
+  X.fillStyle='#fff';X.font='bold 12px Arial';X.textAlign='center';
+  X.fillText('NEW',z.x,z.y-th*0.5);
+  return; // skip all old drawing code below
+  // END TEST
   if(!z.onScreen) return;
   var h=getZombieHeight(z.dist);
   var w=h*0.5;

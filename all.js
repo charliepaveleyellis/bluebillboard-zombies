@@ -1,71 +1,3 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-<title>Blue Billboard - Zombie AR</title>
-<style>
-*{margin:0;padding:0;box-sizing:border-box;}
-body{font-family:'Courier New',monospace;overflow:hidden;background:#000;
-  touch-action:manipulation;-webkit-user-select:none;user-select:none;}
-#cam{position:fixed;top:0;left:0;width:100%;height:100%;object-fit:cover;z-index:0;}
-#cam.hidden{display:none;}
-.fallback{position:fixed;top:0;left:0;right:0;bottom:0;z-index:0;
-  background:linear-gradient(135deg,#0a0a1a 0%,#1a0a0a 50%,#0a0a1a 100%);}
-.fallback.hidden{display:none;}
-canvas{position:fixed;top:0;left:0;width:100%;height:100%;z-index:1;pointer-events:none;}
-
-.overlay{position:fixed;top:0;left:0;right:0;bottom:0;z-index:10;
-  display:flex;flex-direction:column;justify-content:center;align-items:center;
-  background:rgba(10,0,0,0.92);color:#fff;text-align:center;padding:24px;}
-.overlay.hidden{display:none;}
-.overlay .logo-img{width:180px;margin-bottom:20px;}
-.overlay h1{font-size:34px;text-transform:uppercase;letter-spacing:4px;margin-bottom:8px;color:#ff3333;
-  text-shadow:0 0 25px rgba(255,50,50,0.6);}
-.overlay h2{font-size:16px;font-weight:400;margin-bottom:20px;color:#d9d9d9;line-height:1.6;}
-.overlay .final-score{font-size:80px;font-weight:900;color:#ff3333;margin:10px 0;
-  text-shadow:0 0 40px rgba(255,50,50,0.5);}
-.overlay .final-label{font-size:16px;color:#d9d9d9;text-transform:uppercase;letter-spacing:3px;}
-.overlay .stats{font-size:15px;color:#ff6644;margin-top:6px;}
-.overlay .high{font-size:16px;color:#ffdd00;margin-top:6px;}
-.btn{display:inline-block;padding:16px 50px;font-size:18px;font-weight:700;
-  text-transform:uppercase;letter-spacing:2px;color:#fff;background:#660000;
-  border:2px solid #ff3333;border-radius:50px;cursor:pointer;margin-top:20px;
-  box-shadow:0 0 15px rgba(255,50,50,0.3);}
-.btn:active{background:#ff3333;box-shadow:0 0 25px rgba(255,50,50,0.6);}
-.powered-by{position:fixed;bottom:4px;left:0;right:0;text-align:center;
-  font-size:10px;color:rgba(255,50,50,0.15);letter-spacing:1px;
-  text-transform:uppercase;z-index:5;pointer-events:none;}
-
-</style>
-</head>
-<body>
-
-<video id="cam" autoplay playsinline muted></video>
-<div class="fallback hidden" id="fallback"></div>
-<canvas id="game"></canvas>
-
-<div class="overlay" id="startScreen">
-  <img src="logo.png" alt="Blue Billboard" class="logo-img">
-  <h1>Zombie AR</h1>
-  <h2>Zombies come from all around you!<br>Turn your phone to find them!<br>Tap to shoot before they reach you!</h2>
-  <button class="btn" id="startBtn">Survive!</button>
-  <button class="btn" id="arBtn" style="display:none;background:#003300;border-color:#33ff33;margin-top:10px;font-size:14px;padding:12px 36px;">Real AR Mode (Android)</button>
-</div>
-
-<div class="overlay hidden" id="endScreen">
-  <img src="logo.png" alt="Blue Billboard" class="logo-img">
-  <h1 id="endTitle">You Died!</h1>
-  <div class="final-label">Kills</div>
-  <div class="final-score" id="finalScore">0</div>
-  <div class="high" id="highDisp"></div>
-  <div class="stats" id="statsDisp"></div>
-  <button class="btn" id="restartBtn">Try Again!</button>
-</div>
-
-<div class="powered-by">Powered by Blue Billboard</div>
-
-<script>
 // ─── AUDIO ──────────────────────────────────────
 var audioCtx=null;
 function initAudio(){if(!audioCtx)try{audioCtx=new(window.AudioContext||window.webkitAudioContext)();}catch(e){}}
@@ -193,7 +125,6 @@ function spawnZombie(){
 
   zombies.push(z);
 }
-
 // ─── SKIN COLOR HELPERS ─────────────────────────
 function zombieSkin(z,light){
   var hue=z.skinHue||0;
@@ -206,19 +137,6 @@ function zombieSkin(z,light){
 
 // ─── DRAW ZOMBIE ────────────────────────────────
 function drawZombie(z){
-  // TEST: draw simple bright shape to prove this function runs
-  if(!z.onScreen) return;
-  var th=getZombieHeight(z.dist);
-  if(th<6) return;
-  var tw=th*0.4;
-  X.fillStyle='#ff0000';
-  X.fillRect(z.x-tw/2,z.y-th,tw,th);
-  X.fillStyle='#ffff00';
-  X.beginPath();X.arc(z.x,z.y-th*0.8,tw*0.3,0,Math.PI*2);X.fill();
-  X.fillStyle='#fff';X.font='bold 12px Arial';X.textAlign='center';
-  X.fillText('NEW',z.x,z.y-th*0.5);
-  return; // skip all old drawing code below
-  // END TEST
   if(!z.onScreen) return;
   var h=getZombieHeight(z.dist);
   var w=h*0.5;
@@ -739,7 +657,6 @@ function drawAROverlay(){
   X.beginPath();X.moveTo(cx2,cy2-30);X.lineTo(cx2,cy2-8);X.stroke();
   X.beginPath();X.moveTo(cx2,cy2+8);X.lineTo(cx2,cy2+30);X.stroke();
 }
-
 // ─── TAP HANDLER ────────────────────────────────
 var lastTapX=0,lastTapY=0,tapFired=false;
 
@@ -882,7 +799,6 @@ document.addEventListener('click',function(e){
   if(!running||gameOver) return;
   handleTap(e);
 });
-
 // ─── GAME LOOP ──────────────────────────────────
 var lastTime=0;
 function gameLoop(timestamp){
@@ -1096,152 +1012,3 @@ function onRestartTap(e){
 
 document.getElementById('startBtn').onclick=onStartTap;
 document.getElementById('restartBtn').onclick=onRestartTap;
-
-// ─── WEBXR MODE (Android Chrome) ────────────────
-var xrSession=null,xrRenderer=null,xrScene=null,xrCamera=null;
-var xrHitTestSource=null,xrLocalRef=null,xrFloorY=null;
-
-async function startWebXR(){
-  if(typeof THREE==='undefined'){
-    await new Promise(function(resolve,reject){
-      var check=setInterval(function(){
-        if(typeof THREE!=='undefined'){clearInterval(check);resolve();}
-      },100);
-      setTimeout(function(){clearInterval(check);reject(new Error('3D engine not loaded'));},10000);
-    });
-  }
-  xrSession=await navigator.xr.requestSession('immersive-ar',{
-    requiredFeatures:['hit-test','local'],optionalFeatures:['dom-overlay'],domOverlay:{root:document.body}
-  });
-  xrScene=new THREE.Scene();
-  xrCamera=new THREE.PerspectiveCamera(70,window.innerWidth/window.innerHeight,0.01,100);
-  xrRenderer=new THREE.WebGLRenderer({antialias:true,alpha:true});
-  xrRenderer.setSize(window.innerWidth,window.innerHeight);
-  xrRenderer.setPixelRatio(window.devicePixelRatio);
-  xrRenderer.xr.enabled=true;
-  document.body.appendChild(xrRenderer.domElement);
-  xrRenderer.domElement.style.cssText='position:fixed;top:0;left:0;width:100%;height:100%;z-index:0;';
-  cam.classList.add('hidden');C.style.zIndex='2';
-  xrScene.add(new THREE.AmbientLight(0xffffff,0.6));
-  var dl=new THREE.DirectionalLight(0xffffff,0.8);dl.position.set(1,3,2);xrScene.add(dl);
-  xrScene.add(new THREE.PointLight(0xff3333,0.5,10));
-  xrRenderer.xr.setReferenceSpaceType('local');
-  await xrRenderer.xr.setSession(xrSession);
-  xrLocalRef=await xrSession.requestReferenceSpace('local');
-  var viewerRef=await xrSession.requestReferenceSpace('viewer');
-  xrHitTestSource=await xrSession.requestHitTestSource({space:viewerRef});
-  xrSession.addEventListener('select',function(){
-    if(!running||gameOver) return;
-    sfxShoot();spawnParticles(C.width/2,C.height/2,'#ffaa00',3);
-    var bestIdx=-1,bestDist=99999;
-    for(var i=0;i<zombies.length;i++){if(zombies[i].dist<bestDist){bestDist=zombies[i].dist;bestIdx=i;}}
-    if(bestIdx>=0){
-      var z=zombies[bestIdx];z.hp--;z.hitTimer=0.3;
-      if(z.hp<=0){kills++;waveKills++;score+=z.isBig?25:10;sfxKill();
-        if(z.mesh)xrScene.remove(z.mesh);zombies.splice(bestIdx,1);
-        if(waveKills>=waveTarget){wave++;waveKills=0;waveTarget=Math.floor(5+wave*2.5);
-          spawnInterval=Math.max(SPAWN_INTERVAL_MIN,SPAWN_INTERVAL_START-wave*100);sfxWave();screenFlash=10;}
-      }
-    }
-  });
-  xrSession.addEventListener('end',function(){xrSession=null;useWebXR=false;});
-  useWebXR=true;xrRenderer.setAnimationLoop(xrFrame);
-}
-
-function createXRZombie(isBig){
-  var g=new THREE.Group(),sc=isBig?1.3:1.0,skin=isBig?0x1a3a1a:0x3a6a3a,dark=isBig?0x0a2a0a:0x2a4a2a;
-  var body=new THREE.Mesh(new THREE.CylinderGeometry(0.15*sc,0.18*sc,0.5*sc,8),new THREE.MeshLambertMaterial({color:skin}));
-  body.position.y=0.75*sc;g.add(body);
-  var head=new THREE.Mesh(new THREE.SphereGeometry(0.12*sc,8,8),new THREE.MeshLambertMaterial({color:isBig?0x2a4a2a:0x4a7a4a}));
-  head.position.y=1.12*sc;g.add(head);
-  var em=new THREE.MeshBasicMaterial({color:0xff2200});
-  var eL=new THREE.Mesh(new THREE.SphereGeometry(0.02*sc,6,6),em);eL.position.set(-0.04*sc,1.14*sc,0.1*sc);g.add(eL);
-  var eR=new THREE.Mesh(new THREE.SphereGeometry(0.02*sc,6,6),em);eR.position.set(0.04*sc,1.14*sc,0.1*sc);g.add(eR);
-  var am=new THREE.MeshLambertMaterial({color:skin});
-  var aL=new THREE.Mesh(new THREE.CylinderGeometry(0.04*sc,0.03*sc,0.4*sc,6),am);
-  aL.position.set(-0.22*sc,0.85*sc,0.1*sc);aL.rotation.x=-0.8;aL.rotation.z=0.3;g.add(aL);
-  var aR=new THREE.Mesh(new THREE.CylinderGeometry(0.04*sc,0.03*sc,0.4*sc,6),am);
-  aR.position.set(0.22*sc,0.85*sc,0.1*sc);aR.rotation.x=-0.8;aR.rotation.z=-0.3;g.add(aR);
-  var lm=new THREE.MeshLambertMaterial({color:dark});
-  var lL=new THREE.Mesh(new THREE.CylinderGeometry(0.06*sc,0.05*sc,0.5*sc,6),lm);lL.position.set(-0.08*sc,0.25*sc,0);g.add(lL);
-  var lR=new THREE.Mesh(new THREE.CylinderGeometry(0.06*sc,0.05*sc,0.5*sc,6),lm);lR.position.set(0.08*sc,0.25*sc,0);g.add(lR);
-  var sg=new THREE.CircleGeometry(0.25*sc,16);sg.rotateX(-Math.PI/2);
-  g.add(new THREE.Mesh(sg,new THREE.MeshBasicMaterial({color:0x000000,transparent:true,opacity:0.4})));
-  g.userData={aL:aL,aR:aR,lL:lL,lR:lR,head:head,sc:sc};return g;
-}
-
-function spawnXRZombie(){
-  if(xrFloorY===null) return;
-  var angle=Math.random()*Math.PI*2,dist=3+Math.random()*5;
-  var x=xrCamera.position.x+Math.sin(angle)*dist,z2=xrCamera.position.z+Math.cos(angle)*dist;
-  var isBig=Math.random()<0.12+wave*0.02;
-  var mesh=createXRZombie(isBig);mesh.position.set(x,xrFloorY,z2);xrScene.add(mesh);
-  zombies.push({worldAngle:angle*180/Math.PI,dist:dist,speed:(0.4+Math.random()*0.4)*(1+wave*0.05),
-    hp:1+Math.floor(wave/4)+(isBig?2:0),maxHp:1+Math.floor(wave/4)+(isBig?2:0),
-    hitTimer:0,wobble:Math.random()*Math.PI*2,wobbleSpeed:0.02+Math.random()*0.03,
-    isBig:isBig,type:'normal',armPhase:Math.random()*Math.PI*2,skinHue:0,moanTimer:200,
-    x:C.width/2,y:C.height*0.8,scale:0.1,onScreen:true,mesh:mesh,xr:true});
-}
-
-var xrPrevTime=0;
-function xrFrame(time,frame){
-  if(!frame) return;
-  var dt=Math.min(0.05,(time-xrPrevTime)/1000);xrPrevTime=time;frameCount++;
-  if(xrFloorY===null) xrFloorY=xrCamera.position.y-1.5;
-  if(xrHitTestSource){var hits=frame.getHitTestResults(xrHitTestSource);
-    if(hits.length>0){var pose=hits[0].getPose(xrLocalRef);if(pose){xrFloorY=xrFloorY*0.9+pose.transform.position.y*0.1;}}}
-  if(running&&!gameOver){
-    if(time-lastSpawn>spawnInterval){spawnXRZombie();if(wave>3&&Math.random()<0.3)spawnXRZombie();lastSpawn=time;}
-    for(var i=zombies.length-1;i>=0;i--){
-      var z=zombies[i];if(!z.xr) continue;var m=z.mesh;
-      var dx=xrCamera.position.x-m.position.x,dz=xrCamera.position.z-m.position.z;
-      var dist=Math.sqrt(dx*dx+dz*dz);z.dist=dist;
-      m.rotation.y=Math.atan2(dx,dz);
-      if(dist>0.5){m.position.x+=dx/dist*z.speed*dt;m.position.z+=dz/dist*z.speed*dt;}
-      m.position.y=xrFloorY;z.wobble+=z.wobbleSpeed;
-      var wb=Math.sin(z.wobble*4),ud=m.userData;
-      ud.lL.rotation.x=wb*0.4;ud.lR.rotation.x=-wb*0.4;
-      ud.aL.rotation.x=-0.8+wb*0.3;ud.aR.rotation.x=-0.8-wb*0.3;
-      m.rotation.z=Math.sin(z.wobble*2)*0.05;
-      if(z.hitTimer>0){z.hitTimer-=dt;m.visible=Math.sin(z.hitTimer*20)>0;}else{m.visible=true;}
-      z.worldAngle=Math.atan2(dx,dz)*180/Math.PI+camYaw-yawOffset;
-      z.x=C.width/2;z.y=C.height*0.8;z.onScreen=dist<15;
-      if(dist<0.7){hp--;sfxHit();damageFlash=12;xrScene.remove(m);zombies.splice(i,1);
-        if(navigator.vibrate)navigator.vibrate([100,50,150]);
-        if(hp<=0){gameOver=true;screenFlash=15;setTimeout(endGame,800);}}
-    }
-  }
-  X.clearRect(0,0,C.width,C.height);
-  if(damageFlash>0){X.fillStyle='rgba(255,0,0,'+(damageFlash*0.04)+')';X.fillRect(0,0,C.width,C.height);damageFlash--;}
-  if(screenFlash>0){X.fillStyle='rgba(100,255,100,'+(screenFlash*0.03)+')';X.fillRect(0,0,C.width,C.height);screenFlash--;}
-  if(!gameOver) drawHUD();
-  xrRenderer.render(xrScene,xrCamera);
-}
-
-// Show AR button if supported
-if(navigator.xr&&navigator.xr.isSessionSupported){
-  navigator.xr.isSessionSupported('immersive-ar').then(function(ok){
-    if(ok){
-      var arBtn=document.getElementById('arBtn');if(arBtn)arBtn.style.display='inline-block';
-      var s=document.createElement('script');s.src='https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.min.js';
-      document.head.appendChild(s);
-    }
-  }).catch(function(){});
-}
-
-document.getElementById('arBtn').onclick=function(e){
-  if(e)e.preventDefault();initAudio();if(audioCtx&&audioCtx.state==='suspended')audioCtx.resume();
-  var arBtn=document.getElementById('arBtn');arBtn.textContent='Loading AR...';
-  try{startWebXR().then(function(){
-    score=0;kills=0;wave=1;hp=MAX_HP;waveKills=0;waveTarget=5;spawnInterval=SPAWN_INTERVAL_START;
-    zombies=[];particles=[];frameCount=0;lastSpawn=0;gameOver=false;screenFlash=0;damageFlash=0;
-    document.getElementById('startScreen').classList.add('hidden');
-    document.getElementById('endScreen').classList.add('hidden');
-    running=true;arBtn.textContent='AR ACTIVE';arBtn.style.borderColor='#33ff33';
-  }).catch(function(err){arBtn.textContent='FAILED: '+err.message;arBtn.style.borderColor='#ff0000';});
-  }catch(err2){arBtn.textContent='ERROR: '+err2.message;arBtn.style.borderColor='#ff0000';}
-};
-
-</script>
-</body>
-</html>
