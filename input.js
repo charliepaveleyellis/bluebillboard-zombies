@@ -1,9 +1,16 @@
 // ─── TAP HANDLER ────────────────────────────────
 var lastTapX=0,lastTapY=0,tapFired=false;
+var lastShotTime=0;
+var SHOT_COOLDOWN=300; // milliseconds between shots
 
 function handleTap(e){
   if(!running||gameOver) return;
   if(e&&e.preventDefault) e.preventDefault();
+
+  // Cooldown — can't spam
+  var now=Date.now();
+  if(now-lastShotTime<SHOT_COOLDOWN) return;
+  lastShotTime=now;
 
   var tx,ty;
   if(e.changedTouches&&e.changedTouches.length>0){

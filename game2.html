@@ -1119,6 +1119,7 @@ async function startWebXR(){
   xrHitTestSource=await xrSession.requestHitTestSource({space:viewerRef});
   xrSession.addEventListener('select',function(){
     if(!running||gameOver) return;
+    var now=Date.now();if(now-lastShotTime<SHOT_COOLDOWN) return;lastShotTime=now;
     sfxShoot();muzzleFlash=5;spawnParticles(C.width/2,C.height/2,'#ffaa00',3);
     // Only hit zombies roughly in front of the camera (within 30 degrees)
     var bestIdx=-1,bestDist=99999;
