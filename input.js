@@ -26,14 +26,18 @@ function handleTap(e){
   spawnParticles(tx,ty,'#ffcc00',4);
   spawnParticles(tx,ty,'#ffffff',2);
 
-  // Find nearest on-screen zombie
+  // Find nearest on-screen zombie — must tap within range of the zombie
   var bestIdx=-1,bestDist=99999;
   for(var i=0;i<zombies.length;i++){
     var z=zombies[i];
     if(!z.onScreen) continue;
-    var dx=tx-z.x,dy=ty-(z.y-getZombieHeight(z.dist)/2);
+    var zh=getZombieHeight(z.dist);
+    var zw=zh*0.5;
+    var dx=tx-z.x,dy=ty-(z.y-zh/2);
     var d=Math.sqrt(dx*dx+dy*dy);
-    if(d<bestDist){bestDist=d;bestIdx=i;}
+    // Must tap within the zombie's body area (half height + 30px padding)
+    var maxDist=Math.max(40,zh/2+30);
+    if(d<maxDist&&d<bestDist){bestDist=d;bestIdx=i;}
   }
   if(bestIdx>=0){
     var z=zombies[bestIdx];
